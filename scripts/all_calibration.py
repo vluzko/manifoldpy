@@ -11,10 +11,11 @@ def plot_calibration(c_table, bins):
     if bins is None:
         bins = np.arange(0, 1.01, 0.01)
     ax.scatter(bins, c_table)
+    # Perfect calibration line
+    l = np.arange(0, bins.max(), 0.0001)
+    ax.scatter(np.arange(0, bins.max(), 0.0001), np.arange(0, bins.max(), 0.0001), color='red', s=0.01)
 
     plt.show()
-    import pdb
-    pdb.set_trace()
 
 
 def main():
