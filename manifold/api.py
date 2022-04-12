@@ -6,12 +6,13 @@ from attr import define, field
 from typing import List, Optional, Tuple, TypeVar, Type
 
 
-MarketT = TypeVar('MarketT', bound='Market')
+MarketT = TypeVar("MarketT", bound="Market")
 
 
 @define
 class Bet:
     """A single bet"""
+
     contractId: str
     createdTime: int
     isAnte: bool
@@ -24,7 +25,7 @@ class Bet:
     outcome: str
 
     @classmethod
-    def from_json(cls, json) -> 'Bet':
+    def from_json(cls, json) -> "Bet":
         return cls(**json)
 
 
@@ -40,13 +41,14 @@ class Comment:
     userName: str
 
     @classmethod
-    def from_json(cls, json) -> 'Comment':
+    def from_json(cls, json) -> "Comment":
         return cls(**json)
 
 
 @define
 class Market:
     """A market"""
+
     id: str
     creatorUsername: str
     creatorName: str
@@ -61,9 +63,9 @@ class Market:
     mechanism: str
     isResolved: bool
     closeTime: Optional[int] = field(kw_only=True, default=None)
-    creatorAvatarUrl: Optional[str]=field(kw_only=True, default=None)
-    resolution: Optional[str]=field(kw_only=True, default=None)
-    resolutionTime: Optional[int]=field(kw_only=True, default=None)
+    creatorAvatarUrl: Optional[str] = field(kw_only=True, default=None)
+    resolution: Optional[str] = field(kw_only=True, default=None)
+    resolutionTime: Optional[int] = field(kw_only=True, default=None)
     # Separating into two FullMarket types would be pointlessly annoying
     bets: Optional[List[Bet]] = field(kw_only=True, default=None)
     comments: Optional[List[Bet]] = field(kw_only=True, default=None)
@@ -81,9 +83,10 @@ class BinaryMarket(Market):
         p: Appears to also be resolution probability. Isn't present on newer markets, I assume this is deprecated
         totalLiquidity:
     """
+
     probability: float
-    p: Optional[float]=None
-    totalLiquidity: Optional[float]=None
+    p: Optional[float] = None
+    totalLiquidity: Optional[float] = None
 
 
 @define
@@ -92,23 +95,23 @@ class MultiMarket(Market):
 
 
 def get_markets() -> Tuple[List[BinaryMarket], List[MultiMarket]]:
-    URL = 'https://manifold.markets/api/v0/markets'
+    URL = "https://manifold.markets/api/v0/markets"
     json = requests.get(URL).json()
 
     # If this fails, the code is out of date.
-    all_mechanisms = {x['mechanism'] for x in json}
-    assert all_mechanisms == {'cpmm-1', 'dpm-2'}
+    all_mechanisms = {x["mechanism"] for x in json}
+    assert all_mechanisms == {"cpmm-1", "dpm-2"}
 
-    binary_markets = [BinaryMarket.from_json(x) for x in json if 'probability' in x]
-    multi_markets = [MultiMarket.from_json(x) for x in json if 'probability' not in x]
+    binary_markets = [BinaryMarket.from_json(x) for x in json if "probability" in x]
+    multi_markets = [MultiMarket.from_json(x) for x in json if "probability" not in x]
 
     return binary_markets, multi_markets
 
 
 def get_market(market_id: str) -> Market:
-    URL = f'https://manifold.markets/api/v0/market/{market_id}'
+    URL = f"https://manifold.markets/api/v0/market/{market_id}"
     market = requests.get(URL).json()
-    if 'probability' in market:
+    if "probability" in market:
         return BinaryMarket.from_json(market)
     else:
         return MultiMarket.from_json(market)

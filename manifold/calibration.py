@@ -1,12 +1,13 @@
 import numpy as np
+from typing import Optional
 
 
 def extract_binary_probabilities(markets) -> np.ndarray:
     """Get the probabilities from all binary markets
     Markets that resolve NO have their probabilities flipped
     """
-    yes_probs = np.array([x.probability for x in markets if x.resolution == 'YES'])
-    no_probs = np.array([1 - x.probability for x in markets if x.resolution == 'NO'])
+    yes_probs = np.array([x.probability for x in markets if x.resolution == "YES"])
+    no_probs = np.array([1 - x.probability for x in markets if x.resolution == "NO"])
     all_probs = np.concatenate((yes_probs, no_probs))
     return all_probs
 
@@ -15,19 +16,22 @@ def brier_score(markets) -> float:
     """Calculate brier score across all passed markets"""
     all_probs = extract_binary_probabilities(markets)
     num_mkts = len(all_probs)
-    score = 1 / num_mkts * np.sum((np.ones(num_mkts) - all_probs)**2)
+    score = 1 / num_mkts * np.sum((np.ones(num_mkts) - all_probs) ** 2)
     return score
 
 
-def binary_calibration(markets) -> np.ndarray:
-    """Calculate binary calibration across all passed markets"""
-    yes_probs = np.array([x.probability for x in markets if x.resolution == 'YES'])
-    no_probs = np.array([x.probability for x in markets if x.resolution == 'NO'])
-    bins = np.arange(0.0, 1.01, 0.01)
+def binary_calibration(markets, bins: Optional[np.ndarray] = None) -> np.ndarray:
+    """Calculate binary calibration across all passed markets
+    TODO: Ideally this would be beta-binomial model
+    """
+    yes_probs = np.array([x.probability for x in markets if x.resolution == "YES"])
+    no_probs = np.array([x.probability for x in markets if x.resolution == "NO"])
+    if bins is None:
+        bins = np.arange(0.0, 1.01, 0.01)
     yes_idx, yes_counts = np.unique(np.digitize(yes_probs, bins), return_counts=True)
     no_idx, no_counts = np.unique(np.digitize(no_probs, bins), return_counts=True)
 
-    all_vals = np.zeros((101, 2))
+    all_vals = np.zeros((len(bins), 2))
     all_vals[yes_idx, 0] = yes_counts
     all_vals[no_idx, 1] = no_counts
 
