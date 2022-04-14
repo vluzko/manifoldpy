@@ -1,117 +1,37 @@
-import attr
 import requests
 
-# from dataclasses import dataclass, field
-from attr import define, field
-from typing import List, Optional, Tuple, TypeVar, Type
+from typing import List
+from manifold.markets import Market, BinaryMarket, MultiMarket
 
 
-MarketT = TypeVar("MarketT", bound="Market")
+ALL_MARKETS_URL = "https://manifold.markets/api/v0/markets"
+SINGLE_MARKET_URL = "https://manifold.markets/api/v0/market/{}"
 
 
-@define
-class Bet:
-    """A single bet"""
-
-    contractId: str
-    createdTime: int
-    isAnte: bool
-    shares: float
-    userId: str
-    amount: int
-    probAfter: float
-    probBefore: float
-    id: str
-    outcome: str
-
-    @classmethod
-    def from_json(cls, json) -> "Bet":
-        return cls(**json)
-
-
-@define
-class Comment:
-    contractId: str
-    userUsername: str
-    userAvatarUrl: str
-    userId: str
-    text: str
-    createdTime: int
-    betId: str
-    userName: str
-
-    @classmethod
-    def from_json(cls, json) -> "Comment":
-        return cls(**json)
-
-
-@define
-class Market:
-    """A market"""
-
-    id: str
-    creatorUsername: str
-    creatorName: str
-    createdTime: int
-    question: str
-    description: str
-    tags: List[str]
-    url: str
-    pool: float
-    volume7Days: float
-    volume24Hours: float
-    mechanism: str
-    isResolved: bool
-    closeTime: Optional[int] = field(kw_only=True, default=None)
-    creatorAvatarUrl: Optional[str] = field(kw_only=True, default=None)
-    resolution: Optional[str] = field(kw_only=True, default=None)
-    resolutionTime: Optional[int] = field(kw_only=True, default=None)
-    # Separating into two FullMarket types would be pointlessly annoying
-    bets: Optional[List[Bet]] = field(kw_only=True, default=None)
-    comments: Optional[List[Bet]] = field(kw_only=True, default=None)
-
-    @classmethod
-    def from_json(cls: Type[MarketT], json) -> MarketT:
-        return cls(**json)
-
-
-@define
-class BinaryMarket(Market):
-    """A market with a binary resolution
-    Attributes:
-        probability: The current resolution probability
-        p: Appears to also be resolution probability. Isn't present on newer markets, I assume this is deprecated
-        totalLiquidity:
-    """
-
-    probability: float
-    p: Optional[float] = None
-    totalLiquidity: Optional[float] = None
-
-
-@define
-class MultiMarket(Market):
-    """A market with multiple possible resolutions"""
-
-
-def get_markets() -> Tuple[List[BinaryMarket], List[MultiMarket]]:
-    URL = "https://manifold.markets/api/v0/markets"
-    json = requests.get(URL).json()
+def get_markets() -> List[Market]:
+    json = requests.get(ALL_MARKETS_URL).json()
 
     # If this fails, the code is out of date.
     all_mechanisms = {x["mechanism"] for x in json}
     assert all_mechanisms == {"cpmm-1", "dpm-2"}
 
-    binary_markets = [BinaryMarket.from_json(x) for x in json if "probability" in x]
-    multi_markets = [MultiMarket.from_json(x) for x in json if "probability" not in x]
+    markets = [BinaryMarket.from_json(x) if 'probability' in x else MultiMarket.from_json(x) for x in json]
 
-    return binary_markets, multi_markets
+    return markets
 
 
 def get_market(market_id: str) -> Market:
-    URL = f"https://manifold.markets/api/v0/market/{market_id}"
-    market = requests.get(URL).json()
+    market = requests.get(SINGLE_MARKET_URL.format(market_id)).json()
     if "probability" in market:
         return BinaryMarket.from_json(market)
     else:
         return MultiMarket.from_json(market)
+
+
+def get_full_markets() -> List[Market]:
+    """Get all markets, including bets and comments.
+    Not part of the API, but handy. Takes a while to run.
+    """
+    markets = get_markets()
+
+    return [get_market(x.id) for x in markets]
