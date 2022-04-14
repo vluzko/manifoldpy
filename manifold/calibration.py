@@ -20,6 +20,12 @@ def brier_score(markets) -> float:
     return score
 
 
+def log_score(markets) -> float:
+    """Calculate log score across all passed markets"""
+    all_probs = extract_binary_probabilities(markets)
+    return np.sum(-np.log(all_probs))
+
+
 def binary_calibration(markets, bins: Optional[np.ndarray] = None) -> np.ndarray:
     """Calculate binary calibration across all passed markets
     TODO: Ideally this would be beta-binomial model
