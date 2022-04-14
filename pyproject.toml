@@ -1,0 +1,25 @@
+[project]
+name = "manifold"
+description = "Python tools for working with Manifold Markets data"
+version = "0.0.1"
+license = "MIT"
+authors = [
+    "Vincent Luczkow <[email protected]>"
+]
+readme = "README.md"
+python = "^3.8"
+homepage = "https://github.com/vluzko/manifold-markets-python"
+repository = "https://github.com/vluzko/manifold-markets-python"
+
+[dependencies]
+attrs = "^20.2.0"
+numpy = "^1.18.5"
+requests = "2.24.0"
+scipy = "^1.5.2"
+
+[build-system]
+requires = [
+    "setuptools >= 35.0.2",
+    "setuptools_scm >= 2.0.0, <3"
+]
+build-backend = "setuptools.build_meta"
