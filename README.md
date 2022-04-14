@@ -1,2 +1,5 @@
 # manifold-markets-python
-Python bindings for the Manifold API
+Tools for analyzing [Manifold Markets](https://manifold.markets/home) data.
+
+Currently has bindings for their API, and code for computing various accuracy metrics (Brier score, log score, calibration).
+
