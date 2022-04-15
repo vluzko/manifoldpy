@@ -76,8 +76,8 @@ class BinaryMarket(Market):
     """A market with a binary resolution
     Attributes:
         probability: The current resolution probability
-        p: Appears to also be resolution probability. Isn't present on newer markets, I assume this is deprecated
-        totalLiquidity:
+        p: Something to do with CFMM markets
+        totalLiquidity: Also something to do with CFMM markets
     """
 
     probability: float
