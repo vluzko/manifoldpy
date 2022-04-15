@@ -1,4 +1,4 @@
-"""Calibration across all resolved markets
+"""Calibration across all resolved markets.
 Currently only works for binary markets.
 """
 import numpy as np
@@ -51,7 +51,7 @@ def plot_calibration(c_table: np.ndarray, bins: np.ndarray):
     ax.scatter(bins, c_table)
     # Perfect calibration line
     l = np.arange(0, bins.max(), 0.0001)
-    ax.scatter(l, l, color="red", s=0.01)
+    ax.scatter(l, l, color="green", s=0.01, label="Perfect calibration")
 
     ax.set_xticks(np.arange(0, 1+1/10, 1/10))
     ax.set_xlabel("Market probability")
@@ -66,12 +66,17 @@ def plot_beta_binomial(upper_lower: np.ndarray, means: np.ndarray, decimals):
     num_bins = 10**decimals
     x_axis = np.arange(0, 1+1/num_bins, 1/num_bins)
     ax.scatter(x_axis, means, color="blue")
-    ax.scatter(x_axis, upper_lower[:, 0], color="red")
-    ax.scatter(x_axis, upper_lower[:, 1], color="green")
+    ax.scatter(x_axis, upper_lower[:, 0], color="black", marker="_")
+    ax.scatter(x_axis, upper_lower[:, 1], color="black", marker="_")
+    plt.vlines(x_axis, upper_lower[:, 0], upper_lower[:, 1], color="black")
 
+    ax.set_xticks(np.arange(0, 1+1/10, 1/10))
     ax.set_xlabel("Market probability")
+    ax.set_yticks(np.arange(0, 1 + 1/10, 1/10))
     ax.set_ylabel('Beta binomial means and 0.95 intervals')
 
+    l = np.arange(0, x_axis.max(), 0.0001)
+    ax.scatter(l, l, color="green", s=0.01, label="Perfect calibration")
     plt.show()
 
 
@@ -85,11 +90,11 @@ def main():
     )
     # Calibration with 100 bins
     one_percent = calibration.binary_calibration(binary, decimals=2)
-    plot_calibration(one_percent, bins=np.arange(0, 1+ 1/100, 1/100))
+    # plot_calibration(one_percent, bins=np.arange(0, 1+ 1/100, 1/100))
 
     # Calibration with 10 bins
     ten_percent = calibration.binary_calibration(binary, decimals=1)
-    plot_calibration(ten_percent, bins=np.arange(0, 1 + 1/10, 1/10))
+    # plot_calibration(ten_percent, bins=np.arange(0, 1 + 1/10, 1/10))
 
     # Calibration when we model each bin as with a beta binomial model
     beta_interval, beta_means = calibration.beta_binomial_calibration(binary, decimals=1)
