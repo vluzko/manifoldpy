@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import beta
 from typing import List
-from manifold.markets import Market
+from manifold.api import Market
 
 
 def extract_binary_probabilities(markets: List[Market]) -> np.ndarray:

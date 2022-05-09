@@ -2,48 +2,9 @@
 Currently only works for binary markets.
 """
 import numpy as np
-import pickle
-import signal
-import sys
 
-from functools import partial
 from matplotlib import pyplot as plt
-from manifold import api, calibration, markets
-from os import environ
-from pathlib import Path
-from time import time
-
-# TODO: Move the cache code into the main library.
-DATA = Path(environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "manifold"
-DATA.mkdir(exist_ok=True, parents=True)
-CACHE_LOC = DATA / "full_markets.pkl"
-
-
-def cache_objs(full_markets, signum, frame):
-    pickle.dump(full_markets, CACHE_LOC.open('wb'))
-    sys.exit(0)
-
-
-def cache_full_markets():
-    try:
-        full_markets = pickle.load(CACHE_LOC.open('rb'))
-    except FileNotFoundError:
-        full_markets = {}
-    signal.signal(signal.SIGINT, partial(cache_objs, full_markets))
-
-    lite_markets = api.get_markets()
-    print(f"Fetching {len(lite_markets)} markets")
-    try:
-        for lmarket in lite_markets:
-            if lmarket.id in full_markets:
-                continue
-            else:
-                full_market = api.get_market(lmarket.id)
-                full_markets[full_market.id] = {"market": full_market, "cache_time": time()}
-    # Happens sometimes, probably a rate limit on their end, just restart the script.
-    except ConnectionResetError:
-        pass
-    pickle.dump(full_markets, CACHE_LOC.open('wb'))
+from manifold import api, calibration
 
 
 def plot_calibration(c_table: np.ndarray, bins: np.ndarray):
