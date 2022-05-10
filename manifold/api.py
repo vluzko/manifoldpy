@@ -24,7 +24,6 @@ MarketT = TypeVar("MarketT", bound="Market")
 @define
 class Bet:
     """A single bet"""
-
     contractId: str
     createdTime: int
     shares: float
@@ -33,9 +32,13 @@ class Bet:
     probBefore: float
     id: str
     outcome: str
-    loanAmount: float
+    dpmShares: Optional[float]=None
     # TODO: Define Fees class
-    fees: dict
+    fees: Optional[dict]=None
+    # TODO: Define Sale class
+    sale: Optional[dict]=None
+    isSold: Optional[bool]=None
+    loanAmount: Optional[float]=None
     isRedemption: Optional[bool]=None
     isAnte: Optional[bool]=None
     userId: Optional[str]=None
@@ -47,14 +50,17 @@ class Bet:
 
 @define
 class Comment:
+    """A comment on a market"""
+    id: str
     contractId: str
     userUsername: str
     userAvatarUrl: str
     userId: str
     text: str
     createdTime: int
-    betId: str
     userName: str
+    betId: Optional[str]=None
+    answerOutcome: Optional[str]=None
 
     @classmethod
     def from_json(cls, json: Any) -> "Comment":
@@ -64,7 +70,6 @@ class Comment:
 @define
 class Market:
     """A market"""
-
     id: str
     creatorUsername: str
     creatorName: str
@@ -104,6 +109,12 @@ class Market:
 
     @classmethod
     def from_json(cls: Type[MarketT], json: Any) -> MarketT:
+        # TODO: *Maybe* clean this up. The API is pretty inconsistent and I don't really see the
+        # benefit of handling all the idiosyncracies.
+        # if 'bets' in json:
+        #     json['bets'] = [Bet.from_json(bet) for bet in json['bets']]
+        # if 'comments' in json:
+        #     json['comments'] = [Comment.from_json(comment) for comment in json['comments']]
         return cls(**json)  # type: ignore
 
 
@@ -128,6 +139,9 @@ class BinaryMarket(Market):
         assert self.bets is not None
         times, probabilities = zip(*[(bet.createdTime, bet.probAfter) for bet in self.bets])
         return np.array(times), np.array(probabilities)
+
+    def start_probability(self) -> float:
+        return self.get_updates()[1][0]
 
     def final_probability(self) -> float:
         return self.probability
@@ -159,7 +173,7 @@ def get_markets() -> List[Market]:
 
 def get_market(market_id: str) -> Market:
     market = requests.get(SINGLE_MARKET_URL.format(market_id)).json()
-    market['bets'] = [Bet.from_json(x) for x in market['bets']]
+    # market['bets'] = [Bet.from_json(x) for x in market['bets']]
     if "probability" in market:
         return BinaryMarket.from_json(market)
     else:
@@ -198,7 +212,7 @@ def get_full_markets_cached(use_cache: bool = True) -> List[Market]:
     if use_cache:
         try:
             full_markets = pickle.load(config.CACHE_LOC.open('rb'))
-        except FileNotFoundError:
+        except (FileNotFoundError, ModuleNotFoundError):
             full_markets = {}
     else:
         full_markets = {}
@@ -209,12 +223,16 @@ def get_full_markets_cached(use_cache: bool = True) -> List[Market]:
     lite_markets = get_markets()
     print(f"Fetching {len(lite_markets)} markets")
     try:
-        for lmarket in lite_markets:
+        for i, lmarket in enumerate(lite_markets):
             if lmarket.id in full_markets:
                 continue
             else:
                 full_market = get_market(lmarket.id)
                 full_markets[full_market.id] = {"market": full_market, "cache_time": time()}
+
+            if i % 500 == 0:
+                print(i)
+                pickle.dump(full_markets, config.CACHE_LOC.open('wb'))
     # Happens sometimes, probably a rate limit on their end, just restart the script.
     except ConnectionResetError:
         pass
