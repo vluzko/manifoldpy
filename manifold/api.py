@@ -136,9 +136,14 @@ class BinaryMarket(Market):
             full = get_market(self.id)
             self.bets = full.bets
             self.comments = full.comments
+
         assert self.bets is not None
-        times, probabilities = zip(*[(bet.createdTime, bet.probAfter) for bet in self.bets])
-        return np.array(times), np.array(probabilities)
+        if len(self.bets) == 0:
+            return np.array([self.createdTime]), np.array([self.probability])
+        else:
+            # TODO: Fix the string access after the API is cleaned up
+            times, probabilities = zip(*[(bet['createdTime'], bet['probAfter']) for bet in self.bets])  # type: ignore
+            return np.array(times), np.array(probabilities)
 
     def start_probability(self) -> float:
         return self.get_updates()[1][0]
@@ -237,4 +242,5 @@ def get_full_markets_cached(use_cache: bool = True) -> List[Market]:
     except ConnectionResetError:
         pass
     pickle.dump(full_markets, config.CACHE_LOC.open('wb'))
-    return full_markets
+    market_list = [x["market"] for x in full_markets.values()]
+    return market_list
