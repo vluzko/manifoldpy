@@ -90,6 +90,8 @@ class Market:
     # Separating into two FullMarket types would be pointlessly annoying
     bets: Optional[List[Bet]] = field(kw_only=True, default=None)
     comments: Optional[List[Bet]] = field(kw_only=True, default=None)
+    outcomeType: str
+    volume: float
 
     def get_updates(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get all updates to this market.
