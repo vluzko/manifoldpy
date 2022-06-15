@@ -12,7 +12,7 @@ from manifold import config
 
 ALL_MARKETS_URL = "https://manifold.markets/api/v0/markets"
 SINGLE_MARKET_URL = "https://manifold.markets/api/v0/market/{}"
-
+BET_URL = "https://manifold.markets/api/v0/bet"
 
 from attr import define, field
 from typing import List, Optional, TypeVar, Type, Any
@@ -246,3 +246,7 @@ def get_full_markets_cached(use_cache: bool = True) -> List[Market]:
     pickle.dump(full_markets, config.CACHE_LOC.open('wb'))
     market_list = [x["market"] for x in full_markets.values()]
     return market_list
+
+def place_bet(market_id: str, outcome: str, amount: int, key: str) -> requests.Response:
+    r = requests.post(BET_URL, headers={'Content-Type': 'application/json', 'Authorization': 'Key '+key}, json={'contractId':market_id, 'outcome':outcome, 'amount':amount})
+    return r
