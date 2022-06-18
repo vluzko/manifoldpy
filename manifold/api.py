@@ -47,6 +47,22 @@ class Bet:
     def from_json(cls, json: Any) -> "Bet":
         return cls(**json)  # type: ignore
 
+@define
+class Answer:
+    """A single free response answer"""
+    userID: str
+    contractId: str
+    username: str
+    avatarUrl: str
+    name: str
+    createdTime: int
+    id: str
+    text: str
+    number: int
+
+    @classmethod
+    def from_json(cls, json: Any) -> "Answer":
+        return cls(**json)  # type: ignore
 
 @define
 class Comment:
@@ -83,6 +99,7 @@ class Market:
     volume24Hours: float
     mechanism: str
     isResolved: bool
+    answers: Optional[List[Answer]] = field(kw_only=True, default=None)
     closeTime: Optional[int] = field(kw_only=True, default=None)
     creatorAvatarUrl: Optional[str] = field(kw_only=True, default=None)
     resolution: Optional[str] = field(kw_only=True, default=None)
@@ -92,22 +109,6 @@ class Market:
     comments: Optional[List[Bet]] = field(kw_only=True, default=None)
     outcomeType: str
     volume: float
-
-    def get_updates(self) -> Tuple[np.ndarray, np.ndarray]:
-        """Get all updates to this market.
-
-        Returns:
-            Tuple[np.ndarray, np.ndarray]: The time of each update, and the probabilities after each update.
-        """
-        raise NotImplementedError
-
-    def start_probability(self) -> float:
-        """Get the starting probability of the market"""
-        raise NotImplementedError
-
-    def final_probability(self) -> float:
-        """Get the final probability of this market"""
-        raise NotImplementedError
 
     @classmethod
     def from_json(cls: Type[MarketT], json: Any) -> MarketT:
@@ -167,19 +168,40 @@ class MultiMarket(Market):
 
 
 def get_markets() -> List[Market]:
-    json = requests.get(ALL_MARKETS_URL).json()
 
-    # If this fails, the code is out of date.
-    all_mechanisms = {x["mechanism"] for x in json}
-    assert all_mechanisms == {"cpmm-1", "dpm-2"}
+    batchSize = 1000
+    markets = []
+    lastMarketID = ""
 
-    markets = [BinaryMarket.from_json(x) if 'probability' in x else MultiMarket.from_json(x) for x in json]
+    while True:
+        url = ALL_MARKETS_URL+f'?limit={batchSize}{"&before="+lastMarketID if lastMarketID else ""}'
+        print(url)
+        json = requests.get(url).json()
+
+        # If this fails, the code is out of date.
+        all_mechanisms = {x["mechanism"] for x in json}
+        assert all_mechanisms == {"cpmm-1", "dpm-2"}
+
+        markets.extend([BinaryMarket.from_json(x) if 'probability' in x else MultiMarket.from_json(x) for x in json])
+        print('have list of',len(markets))
+        lastMarketID = json[-1]['id']
+        if len(json) < batchSize:
+            break
 
     return markets
 
 
 def get_market(market_id: str) -> Market:
-    market = requests.get(SINGLE_MARKET_URL.format(market_id)).json()
+    for attempt in range(10):
+        try:
+            market = requests.get(SINGLE_MARKET_URL.format(market_id)).json()
+        except ConnectionResetError as e:
+            print("ConnectionResetError, retrying")
+            print(e)
+        break
+    else:
+        print("Get market failed 10 times!")
+        print(market_id)
     # market['bets'] = [Bet.from_json(x) for x in market['bets']]
     if "probability" in market:
         return BinaryMarket.from_json(market)
@@ -222,27 +244,24 @@ def get_full_markets_cached(use_cache: bool = True) -> List[Market]:
         except (FileNotFoundError, ModuleNotFoundError):
             full_markets = {}
     else:
-        full_markets = {}
+        full_markets = {}    
 
     # This is unnecessary in hindsight but I'll leave it in unless it gets annoying to support.
-    signal.signal(signal.SIGINT, partial(cache_objs, full_markets))
+    # signal.signal(signal.SIGINT, partial(cache_objs, full_markets))
+
+    print(f'got {len(full_markets)} cached markets')
 
     lite_markets = get_markets()
     print(f"Fetching {len(lite_markets)} markets")
-    try:
-        for i, lmarket in enumerate(lite_markets):
-            if lmarket.id in full_markets:
-                continue
-            else:
-                full_market = get_market(lmarket.id)
-                full_markets[full_market.id] = {"market": full_market, "cache_time": time()}
-
-            if i % 500 == 0:
-                print(i)
-                pickle.dump(full_markets, config.CACHE_LOC.open('wb'))
-    # Happens sometimes, probably a rate limit on their end, just restart the script.
-    except ConnectionResetError:
-        pass
+    for i, lmarket in enumerate(lite_markets):
+        if lmarket.id in full_markets:
+            continue
+        else:
+            full_market = get_market(lmarket.id)
+            full_markets[full_market.id] = {"market": full_market, "cache_time": time()}
+        if i % 500 == 0:
+            print(i)
+            pickle.dump(full_markets, config.CACHE_LOC.open('wb'))
     pickle.dump(full_markets, config.CACHE_LOC.open('wb'))
     market_list = [x["market"] for x in full_markets.values()]
     return market_list
@@ -250,3 +269,10 @@ def get_full_markets_cached(use_cache: bool = True) -> List[Market]:
 def place_bet(market_id: str, outcome: str, amount: int, key: str) -> requests.Response:
     r = requests.post(BET_URL, headers={'Content-Type': 'application/json', 'Authorization': 'Key '+key}, json={'contractId':market_id, 'outcome':outcome, 'amount':amount})
     return r
+
+def flush_cache(): # incomplete - may corrupt your cache
+    full_markets = pickle.load(config.CACHE_LOC.open('rb'))
+    print(type(full_markets))
+    flushed_markets = {item for item in full_markets.items() if not item[1]['market'].isResolved}
+    print(f'flushed {len(full_markets)} down to {len(flushed_markets)}')
+    pickle.dump(flushed_markets, config.CACHE_LOC.open('wb'))
