@@ -5,17 +5,15 @@ import signal
 import sys
 
 from functools import partial
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 from time import time
 from manifold import config
+from attr import define, field
+from typing import List, Optional, TypeVar, Type, Any
 
 
 ALL_MARKETS_URL = "https://manifold.markets/api/v0/markets"
 SINGLE_MARKET_URL = "https://manifold.markets/api/v0/market/{}"
-
-
-from attr import define, field
-from typing import List, Optional, TypeVar, Type, Any
 
 
 MarketT = TypeVar("MarketT", bound="Market")
@@ -78,11 +76,16 @@ class Market:
     description: str
     tags: List[str]
     url: str
-    pool: float
+    pool: Dict[str, float]
+    volume: float
     volume7Days: float
     volume24Hours: float
+    outcomeType: str
     mechanism: str
     isResolved: bool
+    resolutionProbability: Optional[float] = field(kw_only=True, default=None)
+    p: Optional[float] = field(kw_only=True, default=None)
+    totalLiquidity: Optional[float] = field(kw_only=True, default=None)
     closeTime: Optional[int] = field(kw_only=True, default=None)
     creatorAvatarUrl: Optional[str] = field(kw_only=True, default=None)
     resolution: Optional[str] = field(kw_only=True, default=None)
@@ -142,8 +145,10 @@ class BinaryMarket(Market):
             return np.array([self.createdTime]), np.array([self.probability])
         else:
             # TODO: Fix the string access after the API is cleaned up
-            times, probabilities = zip(*[(bet['createdTime'], bet['probAfter']) for bet in self.bets])  # type: ignore
-            return np.array(times), np.array(probabilities)
+            start_prob = self.bets[0]['probBefore']
+            start_time = self.createdTime
+            times, probabilities = zip(*[(bet['createdTime'], bet['probAfter']) for bet in self.bets])
+            return np.array((start_time, *times)), np.array((start_prob, *probabilities))
 
     def start_probability(self) -> float:
         return self.get_updates()[1][0]
