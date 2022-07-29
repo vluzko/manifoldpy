@@ -334,6 +334,34 @@ def get_bets(
     return [Bet.from_json(x) for x in resp.json()]
 
 
+def make_bet():
+    """Make a bet.
+    [API reference](https://docs.manifold.markets/api#post-v0bet)
+    """
+    raise NotImplementedError
+
+
+def create_market():
+    """Create a new market
+    [API reference](https://docs.manifold.markets/api#post-v0market)
+    """
+    raise NotImplementedError
+
+
+def resolve_market():
+    """Resolve an existing market.
+    [API reference](https://docs.manifold.markets/api#post-v0marketmarketidresolve)
+    """
+    raise NotImplementedError
+
+
+def sell_shares():
+    """Sell shares on a market.
+    [API reference](https://docs.manifold.markets/api#post-v0marketmarketidsell)
+    """
+    raise NotImplementedError
+
+
 def get_all_markets() -> List[Market]:
     """Get all markets.
     Unlike get_markets, this will get all available markets, without a limit
