@@ -18,6 +18,10 @@ SINGLE_MARKET_URL = V0_URL + "market/{}"
 MARKET_SLUG_URL = V0_URL + "slug/{}"
 BETS_URL = V0_URL + "bets"
 
+MAKE_BET_URL = V0_URL + "bet"
+CREATE_MARKET_URL = V0_URL + "market"
+RESOLVE_MARKET_URL = V0_URL + "market/{}/resolve"
+SELL_SHARES_URL = V0_URL + "market/{}/sell"
 
 MarketT = TypeVar("MarketT", bound="Market")
 
@@ -334,32 +338,129 @@ def get_bets(
     return [Bet.from_json(x) for x in resp.json()]
 
 
-def make_bet():
-    """Make a bet.
-    [API reference](https://docs.manifold.markets/api#post-v0bet)
-    """
-    raise NotImplementedError
+@define
+class APIWrapper:
+    key: str
+
+    @property
+    def headers(self) -> Dict[str, str]:
+        return {"Content-Type": "application/json", "Authorization: Key": self.key}
+
+    def make_bet(self, amount: float, contractId: str, outcome: str):
+        """Make a bet.
+        [API reference](https://docs.manifold.markets/api#post-v0bet)
+        Args:
+            amount: The amount to bet
+            contractId: The market id.
+            outcome: The outcome to bet on. YES or NO for binary markets
+            key: The API key to use.
+        """
+        data = {"amount": amount, "contractId": contractId, "outcome": outcome}
+        return requests.post(MAKE_BET_URL, headers=self.headers, data=data)
+
+    def create_market(
+        self,
+        outcomeType: str,
+        question: str,
+        description: str,
+        closeTime: int,
+        tags: List[str],
+    ):
+        """Create a new market
+        [API reference](https://docs.manifold.markets/api#post-v0market)
+
+        Args
+        """
+        data = {
+            "outcomeType": outcomeType,
+            "question": question,
+            "description": description,
+            "closeTime": closeTime,
+            "tags": tags,
+        }
+        return requests.post(CREATE_MARKET_URL, headers=self.headers, data=data)
+
+    def resolve_market(
+        self,
+        market_id: str,
+        outcome: str,
+        probabilityInt: Optional[int] = None,
+        resolutions: Optional[List[Any]] = None,
+        value: Optional[Any] = None,
+    ):
+        """Resolve an existing market.
+        [API reference](https://docs.manifold.markets/api#post-v0marketmarketidresolve)
+        """
+        # Only one of these should be set
+        assert (
+            (probabilityInt is not None)
+            + (resolutions is not None)
+            + (value is not None)
+        ) == 1
+        data: Dict[str, Any] = {"outcome": outcome}
+        if probabilityInt is not None:
+            data["probabilityInt"] = probabilityInt
+        elif resolutions is not None:
+            data["resolutions"] = resolutions
+        elif value is not None:
+            data["value"] = value
+        return requests.post(
+            RESOLVE_MARKET_URL.format(market_id), headers=self.headers, data=data
+        )
+
+    def sell_shares(self, market_id: str, outcome: str, shares: Optional[int] = None):
+        data: Dict[str, Any] = {
+            "outcome": outcome,
+        }
+        if shares is not None:
+            data["shares"] = shares
+        return requests.post(
+            MAKE_BET_URL.format(market_id), headers=self.headers, data=data
+        )
 
 
-def create_market():
-    """Create a new market
-    [API reference](https://docs.manifold.markets/api#post-v0market)
-    """
-    raise NotImplementedError
+def make_bet(key: str, amount: float, contractId: str, outcome: str):
+    """See `APIWrapper.make_bet`"""
+    wrapper = APIWrapper(key)
+    return wrapper.make_bet(amount, contractId, outcome)
 
 
-def resolve_market():
-    """Resolve an existing market.
-    [API reference](https://docs.manifold.markets/api#post-v0marketmarketidresolve)
-    """
-    raise NotImplementedError
+def create_market(
+    key: str,
+    outcomeType: str,
+    question: str,
+    description: str,
+    closeTime: int,
+    tags: List[str],
+):
+    """See `APIWrapper.create_market`"""
+    wrapper = APIWrapper(key)
+    return wrapper.create_market(outcomeType, question, description, closeTime, tags)
 
 
-def sell_shares():
-    """Sell shares on a market.
-    [API reference](https://docs.manifold.markets/api#post-v0marketmarketidsell)
-    """
-    raise NotImplementedError
+def resolve_market(
+    key: str,
+    market_id: str,
+    outcome: str,
+    probabilityInt: Optional[int] = None,
+    resolutions: Optional[List[Any]] = None,
+    value: Optional[Any] = None,
+):
+    """See `APIWrapper.resolve_market`"""
+    wrapper = APIWrapper(key)
+    return wrapper.resolve_market(
+        market_id,
+        outcome,
+        probabilityInt=probabilityInt,
+        resolutions=resolutions,
+        value=value,
+    )
+
+
+def sell_shares(key: str, market_id: str, outcome: str, shares: Optional[int] = None):
+    """See `APIWrapper.sell_shares`"""
+    wrapper = APIWrapper(key)
+    return wrapper.sell_shares(market_id, outcome, shares=shares)
 
 
 def get_all_markets() -> List[Market]:
