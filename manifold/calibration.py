@@ -5,7 +5,9 @@ from scipy.stats import beta
 from typing import List, Tuple
 
 
-def extract_binary_probabilities(markets: List[BinaryMarket]) -> Tuple[np.ndarray, np.ndarray]:
+def extract_binary_probabilities(
+    markets: List[BinaryMarket],
+) -> Tuple[np.ndarray, np.ndarray]:
     """Get the closing probabilities from all binary markets.
     Markets that resolve NO have their probabilities flipped
     """
@@ -19,7 +21,7 @@ def brier_score(yes_probs: np.ndarray, no_probs: np.ndarray) -> float:
     Brier score is 1/n * sum((outcome - prob)^2) where outcome is 0 or 1.
     """
     yes_scores = (1 - yes_probs) ** 2
-    no_scores = no_probs ** 2
+    no_scores = no_probs**2
 
     num_mkts = len(yes_probs) + len(no_probs)
     score = 1 / num_mkts * (np.sum(yes_scores) + np.sum(no_scores))
@@ -51,9 +53,9 @@ def bet_counts(
     )
     no_idx, no_counts = np.unique(no_probs.round(decimals=decimals), return_counts=True)
 
-    all_vals = np.zeros((10 ** decimals + 1, 2))
-    all_vals[(yes_idx * 10 ** decimals).astype(int), 0] = yes_counts
-    all_vals[(no_idx * 10 ** decimals).astype(int), 1] = no_counts
+    all_vals = np.zeros((10**decimals + 1, 2))
+    all_vals[(yes_idx * 10**decimals).astype(int), 0] = yes_counts
+    all_vals[(no_idx * 10**decimals).astype(int), 1] = no_counts
     return all_vals
 
 
@@ -94,7 +96,7 @@ def beta_binomial_calibration(
 
 def plot_beta_binomial(upper_lower: np.ndarray, means: np.ndarray, decimals):
     _, ax = plt.subplots()
-    num_bins = 10 ** decimals
+    num_bins = 10**decimals
     x_axis = np.arange(0, 1 + 1 / num_bins, 1 / num_bins)
     ax.scatter(x_axis, means, color="blue")
     ax.scatter(x_axis, upper_lower[:, 0], color="black", marker="_")
@@ -111,9 +113,7 @@ def plot_beta_binomial(upper_lower: np.ndarray, means: np.ndarray, decimals):
     plt.show()
 
 
-def overall_calibration(
-    yes_probs: np.ndarray, no_probs: np.ndarray, decimals: int = 1
-):
+def overall_calibration(yes_probs: np.ndarray, no_probs: np.ndarray, decimals: int = 1):
     scoring_rules = {"Brier": brier_score, "Log": log_score}
     scores = {k: v(yes_probs, no_probs) for k, v in scoring_rules.items()}
     print("\n".join(f"{k}: {v}" for k, v in scores.items()))

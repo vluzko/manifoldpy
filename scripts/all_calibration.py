@@ -14,9 +14,9 @@ def plot_calibration(c_table: np.ndarray, bins: np.ndarray):
     l = np.arange(0, bins.max(), 0.0001)
     ax.scatter(l, l, color="green", s=0.01, label="Perfect calibration")
 
-    ax.set_xticks(np.arange(0, 1+1/10, 1/10))
+    ax.set_xticks(np.arange(0, 1 + 1 / 10, 1 / 10))
     ax.set_xlabel("Market probability")
-    ax.set_yticks(np.arange(0, 1 + 1/10, 1/10))
+    ax.set_yticks(np.arange(0, 1 + 1 / 10, 1 / 10))
     ax.set_ylabel("Empirical probability")
 
     plt.show()
@@ -29,9 +29,15 @@ def calibration_at_close():
 
 
 def calibration_at_start():
-    binary = [m for m in api.get_full_markets() if isinstance(m, api.BinaryMarket) and m.isResolved]
-    yes_probs = np.array([m.start_probability() for m in binary if m.resolution == 'YES'])
-    no_probs = np.array([m.start_probability() for m in binary if m.resolution == 'NO'])
+    binary = [
+        m
+        for m in api.get_full_markets()
+        if isinstance(m, api.BinaryMarket) and m.isResolved
+    ]
+    yes_probs = np.array(
+        [m.start_probability() for m in binary if m.resolution == "YES"]
+    )
+    no_probs = np.array([m.start_probability() for m in binary if m.resolution == "NO"])
     calibration.overall_calibration(yes_probs, no_probs)
 
 

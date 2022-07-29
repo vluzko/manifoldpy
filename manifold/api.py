@@ -9,22 +9,23 @@ from attr import define, field
 from typing import List, Optional, TypeVar, Type, Any
 
 
-V0_URL = 'https://manifold.markets/api/v0/'
-USERNAME_URL = V0_URL + 'user/{}'
-USER_ID_URL = V0_URL + 'user/by-id/{}'
-USERS_URL = V0_URL + 'users'
-ALL_MARKETS_URL = V0_URL + 'markets'
-SINGLE_MARKET_URL = V0_URL + 'market/{}'
-MARKET_SLUG_URL =  V0_URL + 'slug/{}'
-BETS_URL = V0_URL + 'bets'
+V0_URL = "https://manifold.markets/api/v0/"
+USERNAME_URL = V0_URL + "user/{}"
+USER_ID_URL = V0_URL + "user/by-id/{}"
+USERS_URL = V0_URL + "users"
+ALL_MARKETS_URL = V0_URL + "markets"
+SINGLE_MARKET_URL = V0_URL + "market/{}"
+MARKET_SLUG_URL = V0_URL + "slug/{}"
+BETS_URL = V0_URL + "bets"
 
 
-MarketT = TypeVar('MarketT', bound='Market')
+MarketT = TypeVar("MarketT", bound="Market")
 
 
 @define
 class User:
     """A manifold user"""
+
     id: str
     createdTime: int
     name: str
@@ -35,20 +36,21 @@ class User:
     totalDeposits: float
     profitCached: Dict[str, float]
     creatorVolumeCached: Dict[str, float]
-    bio: Optional[str]=None
-    twitterHandle: Optional[str]=None
-    discordHandle: Optional[str]=None
-    bannerUrl: Optional[str]=None
-    website: Optional[str]=None
+    bio: Optional[str] = None
+    twitterHandle: Optional[str] = None
+    discordHandle: Optional[str] = None
+    bannerUrl: Optional[str] = None
+    website: Optional[str] = None
 
     @classmethod
-    def from_json(cls, json: Any) -> 'User':
+    def from_json(cls, json: Any) -> "User":
         return cls(**json)
 
 
 @define
 class Bet:
     """A single bet"""
+
     contractId: str
     createdTime: int
     shares: float
@@ -57,12 +59,12 @@ class Bet:
     probBefore: float
     id: str
     outcome: str
-    isLiquidityProvision: Optional[bool]=None
-    isCancelled: Optional[bool]=None
-    orderAmount: Optional[float]=None
-    fills: Optional[float]=None
-    isFilled: Optional[bool]=None
-    limitProb: Optional[float]=None
+    isLiquidityProvision: Optional[bool] = None
+    isCancelled: Optional[bool] = None
+    orderAmount: Optional[float] = None
+    fills: Optional[float] = None
+    isFilled: Optional[bool] = None
+    limitProb: Optional[float] = None
     dpmShares: Optional[float] = None
     # TODO: Define Fees class
     fees: Optional[dict] = None
@@ -82,6 +84,7 @@ class Bet:
 @define
 class Comment:
     """A comment on a market"""
+
     id: str
     contractId: str
     userUsername: str
@@ -106,6 +109,7 @@ class Answer:
 @define
 class Market:
     """A market"""
+
     id: str
     creatorUsername: str
     creatorName: str
@@ -256,9 +260,9 @@ def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]
 
     """
     if before is not None:
-        params = {'limit': limit, 'before': before}
+        params = {"limit": limit, "before": before}
     else:
-        params = {'limit': limit}
+        params = {"limit": limit}
     json = requests.get(ALL_MARKETS_URL, params=params).json()  # type: ignore
 
     # If this fails, the code is out of date.
@@ -302,7 +306,12 @@ def get_market(market_id: str) -> Market:
         return FreeResponseMarket.from_json(market)
 
 
-def get_bets(username: Optional[str]=None, market: Optional[str]=None, limit: int=1000, before: Optional[str]=None) -> List[Bet]:
+def get_bets(
+    username: Optional[str] = None,
+    market: Optional[str] = None,
+    limit: int = 1000,
+    before: Optional[str] = None,
+) -> List[Bet]:
     """Get all bets.
     [API reference](https://docs.manifold.markets/api#get-v0bets)
 
@@ -312,13 +321,13 @@ def get_bets(username: Optional[str]=None, market: Optional[str]=None, limit: in
         limit:
         before:
     """
-    params: Dict[str, Any] = {'limit': limit}
+    params: Dict[str, Any] = {"limit": limit}
     if username is not None:
-        params['username'] = username
+        params["username"] = username
     if market is not None:
-        params['market'] = market
+        params["market"] = market
     if before is not None:
-        params['before'] = before
+        params["before"] = before
     resp = requests.get(BETS_URL, params=params)
     resp.raise_for_status()
 

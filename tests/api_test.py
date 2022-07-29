@@ -6,15 +6,15 @@ from manifold import api
 
 
 def test_get_user_by_name():
-    user = api.get_user_by_name('vluzko')
-    assert user.username == 'vluzko'
-    assert user.id == 'acvO0NAsghTTgGjnsdwt94O44OT2'
+    user = api.get_user_by_name("vluzko")
+    assert user.username == "vluzko"
+    assert user.id == "acvO0NAsghTTgGjnsdwt94O44OT2"
 
 
 def test_get_user_by_id():
-    user = api.get_user_by_id('acvO0NAsghTTgGjnsdwt94O44OT2')
-    assert user.username == 'vluzko'
-    assert user.id == 'acvO0NAsghTTgGjnsdwt94O44OT2'
+    user = api.get_user_by_id("acvO0NAsghTTgGjnsdwt94O44OT2")
+    assert user.username == "vluzko"
+    assert user.id == "acvO0NAsghTTgGjnsdwt94O44OT2"
 
 
 def test_get_users():
@@ -29,15 +29,18 @@ def test_get_markets():
 
 
 def test_get_market():
-    market = api.get_market('6qEWrk0Af7eWupuSWxQm')
+    market = api.get_market("6qEWrk0Af7eWupuSWxQm")
     assert market.bets is not None
     assert market.comments is not None
 
 
 def test_by_slug():
-    market = api.get_slug('will-any-model-pass-an-undergrad-pr')
+    market = api.get_slug("will-any-model-pass-an-undergrad-pr")
     assert market.createdTime == 1657570778443
-    assert market.question == 'Will any model pass an "undergrad proofs exam" Turing test by 2027?'
+    assert (
+        market.question
+        == 'Will any model pass an "undergrad proofs exam" Turing test by 2027?'
+    )
 
 
 def test_get_bets():
@@ -47,16 +50,17 @@ def test_get_bets():
 def test_broken():
     # If this stops breaking, the API has been updated
     with pytest.raises(HTTPError):
-        market = api.get_market('YVDsNCQWr7hUrAiFiKIV')
+        market = api.get_market("YVDsNCQWr7hUrAiFiKIV")
 
 
 def test_get_free_response():
-    market = api.get_market('kbCU0NTSe22jMWWwD4i5')
-    assert market.question == 'When will 100 babies be born whose embryos were selected for genetic scores for intelligence?'
+    market = api.get_market("kbCU0NTSe22jMWWwD4i5")
+    assert (
+        market.question
+        == "When will 100 babies be born whose embryos were selected for genetic scores for intelligence?"
+    )
     assert market.createdTime == 1656552954430
     assert len(market.answers) >= 5
-    import pdb
-    pdb.set_trace()
 
 
 def test_get_market_noisy():
@@ -78,7 +82,7 @@ def test_get_probabilities():
     Could break if the market ever gets deleted.
     """
     # Permalink: https://manifold.markets/guzey/will-i-create-at-least-one-more-pre
-    market_id = '8Lt9ZTHCPCK58gtn0Y8n'
+    market_id = "8Lt9ZTHCPCK58gtn0Y8n"
     market = api.get_market(market_id)
     times, probs = market.get_updates()
     assert len(times) == len(probs) == 23
