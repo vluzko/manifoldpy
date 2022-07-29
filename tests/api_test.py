@@ -1,5 +1,20 @@
 import numpy as np
+import random
+import pytest
+from requests import HTTPError
 from manifold import api
+
+
+def test_get_user_by_name():
+    user = api.get_user_by_name('vluzko')
+    assert user.username == 'vluzko'
+    assert user.id == 'acvO0NAsghTTgGjnsdwt94O44OT2'
+
+
+def test_get_user_by_id():
+    user = api.get_user_by_id('acvO0NAsghTTgGjnsdwt94O44OT2')
+    assert user.username == 'vluzko'
+    assert user.id == 'acvO0NAsghTTgGjnsdwt94O44OT2'
 
 
 def test_get_markets():
@@ -13,6 +28,50 @@ def test_get_market():
     market = api.get_market('6qEWrk0Af7eWupuSWxQm')
     assert market.bets is not None
     assert market.comments is not None
+
+
+def test_get_all_markets():
+    markets = api.get_all_markets()
+    for market in markets:
+        assert market.bets is None
+        assert market.comments is None
+
+
+
+
+def test_broken():
+    # If this stops breaking, the API has been updated
+    with pytest.raises(HTTPError):
+        market = api.get_market('YVDsNCQWr7hUrAiFiKIV')
+
+
+def test_get_free_response():
+    market = api.get_market('kbCU0NTSe22jMWWwD4i5')
+    assert market.question == 'When will 100 babies be born whose embryos were selected for genetic scores for intelligence?'
+    assert market.createdTime == 1656552954430
+    assert len(market.answers) >= 5
+    import pdb
+    pdb.set_trace()
+
+
+def test_get_market_noisy():
+    """Randomly sample k markets and check the data matches no matter how we get it"""
+    k = 25
+    markets = api.get_markets()
+    choices = random.sample(range(len(markets)), k)
+
+    for i in choices:
+        lite_market = markets[i]
+        full_market_id = api.get_market(lite_market.id)
+        full_market_slug = api.get_slug(lite_market.slug)
+        assert full_market_id == full_market_slug
+        assert full_market_id.question == lite_market.question
+
+
+def test_by_slug():
+    market = api.get_slug('will-any-model-pass-an-undergrad-pr')
+    assert market.createdTime == 1657570778443
+    assert market.question == 'Will any model pass an "undergrad proofs exam" Turing test by 2027?'
 
 
 def test_get_probabilities():

@@ -1,10 +1,7 @@
 import numpy as np
 import requests
 import pickle
-import signal
-import sys
 
-from functools import partial
 from typing import Dict, List, Tuple
 from time import time
 from manifold import config
@@ -12,16 +9,42 @@ from attr import define, field
 from typing import List, Optional, TypeVar, Type, Any
 
 
-ALL_MARKETS_URL = "https://manifold.markets/api/v0/markets"
-SINGLE_MARKET_URL = "https://manifold.markets/api/v0/market/{}"
+V0_URL = 'https://manifold.markets/api/v0/'
+USERNAME_URL = V0_URL + 'user/{}'
+USER_ID_URL = V0_URL + 'user/by-id/{}'
+ALL_MARKETS_URL = V0_URL + 'markets'
+SINGLE_MARKET_URL = V0_URL + 'market/{}'
+MARKET_SLUG_URL =  V0_URL + 'slug/{}'
 
 
-MarketT = TypeVar("MarketT", bound="Market")
+MarketT = TypeVar('MarketT', bound='Market')
+
+
+@define
+class User:
+    """A manifold user"""
+    id: str
+    createdTime: int
+    name: str
+    username: str
+    url: str
+    avatarUrl: str
+    bio: str
+    website: str
+    balance: float
+    totalDeposits: float
+    profitCached: Dict[str, float]
+    creatorVolumeCached: Dict[str, float]
+
+    @classmethod
+    def from_json(cls, json: Any) -> 'User':
+        return cls(**json)
 
 
 @define
 class Bet:
     """A single bet"""
+
     contractId: str
     createdTime: int
     shares: float
@@ -30,16 +53,16 @@ class Bet:
     probBefore: float
     id: str
     outcome: str
-    dpmShares: Optional[float]=None
+    dpmShares: Optional[float] = None
     # TODO: Define Fees class
-    fees: Optional[dict]=None
+    fees: Optional[dict] = None
     # TODO: Define Sale class
-    sale: Optional[dict]=None
-    isSold: Optional[bool]=None
-    loanAmount: Optional[float]=None
-    isRedemption: Optional[bool]=None
-    isAnte: Optional[bool]=None
-    userId: Optional[str]=None
+    sale: Optional[dict] = None
+    isSold: Optional[bool] = None
+    loanAmount: Optional[float] = None
+    isRedemption: Optional[bool] = None
+    isAnte: Optional[bool] = None
+    userId: Optional[str] = None
 
     @classmethod
     def from_json(cls, json: Any) -> "Bet":
@@ -49,6 +72,7 @@ class Bet:
 @define
 class Comment:
     """A comment on a market"""
+
     id: str
     contractId: str
     userUsername: str
@@ -57,8 +81,8 @@ class Comment:
     text: str
     createdTime: int
     userName: str
-    betId: Optional[str]=None
-    answerOutcome: Optional[str]=None
+    betId: Optional[str] = None
+    answerOutcome: Optional[str] = None
 
     @classmethod
     def from_json(cls, json: Any) -> "Comment":
@@ -66,8 +90,14 @@ class Comment:
 
 
 @define
+class Answer:
+    """An answer to a free response market"""
+
+
+@define
 class Market:
     """A market"""
+
     id: str
     creatorUsername: str
     creatorName: str
@@ -93,6 +123,10 @@ class Market:
     # Separating into two FullMarket types would be pointlessly annoying
     bets: Optional[List[Bet]] = field(kw_only=True, default=None)
     comments: Optional[List[Bet]] = field(kw_only=True, default=None)
+
+    @property
+    def slug(self) -> str:
+        return self.url.split("/")[-1]
 
     def get_updates(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get all updates to this market.
@@ -131,8 +165,6 @@ class BinaryMarket(Market):
     """
 
     probability: float
-    p: Optional[float] = None
-    totalLiquidity: Optional[float] = None
 
     def get_updates(self) -> Tuple[np.ndarray, np.ndarray]:
         if self.bets is None:
@@ -145,10 +177,14 @@ class BinaryMarket(Market):
             return np.array([self.createdTime]), np.array([self.probability])
         else:
             # TODO: Fix the string access after the API is cleaned up
-            start_prob = self.bets[0]['probBefore']
+            start_prob = self.bets[0]["probBefore"]
             start_time = self.createdTime
-            times, probabilities = zip(*[(bet['createdTime'], bet['probAfter']) for bet in self.bets])
-            return np.array((start_time, *times)), np.array((start_prob, *probabilities))
+            times, probabilities = zip(
+                *[(bet["createdTime"], bet["probAfter"]) for bet in self.bets]
+            )
+            return np.array((start_time, *times)), np.array(
+                (start_prob, *probabilities)
+            )
 
     def start_probability(self) -> float:
         return self.get_updates()[1][0]
@@ -158,94 +194,156 @@ class BinaryMarket(Market):
 
 
 @define
-class MultiMarket(Market):
+class FreeResponseMarket(Market):
     """A market with multiple possible resolutions"""
+
+    answers: Optional[List[Any]] = None
 
     def final_probability(self) -> float:
         if self.bets is None:
             pass
-        import pdb
-        pdb.set_trace()
         raise NotImplementedError
 
 
-def get_markets() -> List[Market]:
-    json = requests.get(ALL_MARKETS_URL).json()
+def get_user_by_name(username: str):
+    """Get the data for one user from their username
+    [API reference](https://docs.manifold.markets/api#get-v0userusername)
+
+    Args:
+        username:
+    """
+    resp = requests.get(USERNAME_URL.format(username))
+    resp.raise_for_status()
+    return User.from_json(resp.json())
+
+
+def get_user_by_id(user_id: str):
+    """Get the data for one user from their username
+    [API reference](https://docs.manifold.markets/api#get-v0userby-idid)
+
+    Args:
+        user_id:
+    """
+    resp = requests.get(USER_ID_URL.format(user_id))
+    resp.raise_for_status()
+    return User.from_json(resp.json())
+
+
+def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]:
+    """Get a list of markets
+    [API reference](https://docs.manifold.markets/api#get-v0markets)
+
+    Args:
+        limit:
+        before:
+
+    """
+    if before is not None:
+        params = {'limit': limit, 'before': before}
+    else:
+        params = {'limit': limit}
+    json = requests.get(ALL_MARKETS_URL, params=params).json()  # type: ignore
 
     # If this fails, the code is out of date.
     all_mechanisms = {x["mechanism"] for x in json}
     assert all_mechanisms == {"cpmm-1", "dpm-2"}
 
-    markets = [BinaryMarket.from_json(x) if 'probability' in x else MultiMarket.from_json(x) for x in json]
+    markets = [
+        BinaryMarket.from_json(x)
+        if "probability" in x
+        else FreeResponseMarket.from_json(x)
+        for x in json
+    ]
 
     return markets
 
 
-def get_market(market_id: str) -> Market:
-    market = requests.get(SINGLE_MARKET_URL.format(market_id)).json()
-    # market['bets'] = [Bet.from_json(x) for x in market['bets']]
+def get_all_markets() -> List[Market]:
+    """Get all markets
+    Automatically calls the markets endpoint until all data has been read.
+    """
+    markets = get_markets(limit=1000)
+    i = markets[0].id
+    while True:
+        new_markets = get_markets(limit=1000, before=i)
+        markets.extend(new_markets)
+        if len(new_markets) < 1000:
+            break
+        else:
+            i = markets[-1].id
+    return markets
+
+
+def get_slug(slug: str) -> Market:
+    """Get a market by its slug
+    [API reference](https://docs.manifold.markets/api#get-v0slugmarketslug)
+    """
+    market = requests.get(MARKET_SLUG_URL.format(slug)).json()
     if "probability" in market:
         return BinaryMarket.from_json(market)
     else:
-        return MultiMarket.from_json(market)
+        return FreeResponseMarket.from_json(market)
 
 
-def get_market_cached(market_id: str) -> Market:
-    try:
-        full_markets = pickle.load(config.CACHE_LOC.open('rb'))
-        if market_id in full_markets:
-            return full_markets[market_id]
-        else:
-            # TODO: Update cache
-            return get_market(market_id)
-    except FileNotFoundError:
-        return get_market(market_id)
+def get_market(market_id: str) -> Market:
+    """Get a single full market
 
-
-def get_full_markets() -> List[Market]:
-    """Get all markets, including bets and comments.
-    Not part of the API, but handy. Takes a while to run.
+    Raises:
+        HTTPError: If the API gives a bad response.
+            This is known to happen with markets with a very large number of bets.
     """
-    markets = get_markets()
+    resp = requests.get(SINGLE_MARKET_URL.format(market_id), timeout=20)
+    resp.raise_for_status()
+    market = resp.json()
+    if "probability" in market:
+        return BinaryMarket.from_json(market)
+    else:
+        return FreeResponseMarket.from_json(market)
 
-    return [get_market(x.id) for x in markets]
 
-
-def get_full_markets_cached(use_cache: bool = True) -> List[Market]:
+def get_full_markets(reset_cache: bool = False, cache_every: int = 500) -> List[Market]:
     """Get all full markets, and cache the results.
     Cache is not timestamped.
-    """
-    def cache_objs(full_markets, _signum, _frame):
-        pickle.dump(full_markets, config.CACHE_LOC.open('wb'))
-        sys.exit(0)
 
-    if use_cache:
+    Args:
+        reset_cache: Whether or not to overwrite the existing cache
+        cache_every: How frequently to cache the updated markets.
+    """
+
+    if not reset_cache:
         try:
-            full_markets = pickle.load(config.CACHE_LOC.open('rb'))
-        except (FileNotFoundError, ModuleNotFoundError):
+            full_markets = pickle.load(config.CACHE_LOC.open("rb"))
+        except FileNotFoundError:
             full_markets = {}
+        # Indicates the cache is out of date and needs to be overwritten anyway
+        except ModuleNotFoundError:
+            full_markets = {}
+            pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
     else:
         full_markets = {}
-
-    # This is unnecessary in hindsight but I'll leave it in unless it gets annoying to support.
-    signal.signal(signal.SIGINT, partial(cache_objs, full_markets))
+        pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
 
     lite_markets = get_markets()
     print(f"Fetching {len(lite_markets)} markets")
-    try:
-        for i, lmarket in enumerate(lite_markets):
-            if lmarket.id in full_markets:
-                continue
-            else:
+    missed_markets = []
+    for i, lmarket in enumerate(lite_markets):
+        if lmarket.id in full_markets:
+            continue
+        else:
+            try:
                 full_market = get_market(lmarket.id)
-                full_markets[full_market.id] = {"market": full_market, "cache_time": time()}
+                full_markets[full_market.id] = {
+                    "market": full_market,
+                    "cache_time": time(),
+                }
+            # If we get an HTTP Error, just skip that market
+            except requests.HTTPError:
+                missed_markets.append(lmarket.id)
 
-            if i % 500 == 0:
-                print(i)
-                pickle.dump(full_markets, config.CACHE_LOC.open('wb'))
-    # Happens sometimes, probably a rate limit on their end, just restart the script.
-    except ConnectionResetError:
-        pass
-    pickle.dump(full_markets, config.CACHE_LOC.open('wb'))
+        if i % cache_every == 0:
+            print(i)
+            pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
+    pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
     market_list = [x["market"] for x in full_markets.values()]
+    print(f"Could not get {len(missed_markets)} markets.")
     return market_list

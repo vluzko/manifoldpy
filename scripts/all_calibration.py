@@ -29,7 +29,7 @@ def calibration_at_close():
 
 
 def calibration_at_start():
-    binary = [m for m in api.get_full_markets_cached() if isinstance(m, api.BinaryMarket) and m.isResolved]
+    binary = [m for m in api.get_full_markets() if isinstance(m, api.BinaryMarket) and m.isResolved]
     yes_probs = np.array([m.start_probability() for m in binary if m.resolution == 'YES'])
     no_probs = np.array([m.start_probability() for m in binary if m.resolution == 'NO'])
     calibration.overall_calibration(yes_probs, no_probs)
