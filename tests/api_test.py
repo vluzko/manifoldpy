@@ -17,6 +17,10 @@ def test_get_user_by_id():
     assert user.id == 'acvO0NAsghTTgGjnsdwt94O44OT2'
 
 
+def test_get_users():
+    api.get_users()
+
+
 def test_get_markets():
     markets = api.get_markets()
     for market in markets:

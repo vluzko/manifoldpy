@@ -12,6 +12,7 @@ from typing import List, Optional, TypeVar, Type, Any
 V0_URL = 'https://manifold.markets/api/v0/'
 USERNAME_URL = V0_URL + 'user/{}'
 USER_ID_URL = V0_URL + 'user/by-id/{}'
+USERS_URL = V0_URL + 'users'
 ALL_MARKETS_URL = V0_URL + 'markets'
 SINGLE_MARKET_URL = V0_URL + 'market/{}'
 MARKET_SLUG_URL =  V0_URL + 'slug/{}'
@@ -29,12 +30,15 @@ class User:
     username: str
     url: str
     avatarUrl: str
-    bio: str
-    website: str
     balance: float
     totalDeposits: float
     profitCached: Dict[str, float]
     creatorVolumeCached: Dict[str, float]
+    bio: Optional[str]=None
+    twitterHandle: Optional[str]=None
+    discordHandle: Optional[str]=None
+    bannerUrl: Optional[str]=None
+    website: Optional[str]=None
 
     @classmethod
     def from_json(cls, json: Any) -> 'User':
@@ -44,7 +48,6 @@ class User:
 @define
 class Bet:
     """A single bet"""
-
     contractId: str
     createdTime: int
     shares: float
@@ -72,7 +75,6 @@ class Bet:
 @define
 class Comment:
     """A comment on a market"""
-
     id: str
     contractId: str
     userUsername: str
@@ -97,7 +99,6 @@ class Answer:
 @define
 class Market:
     """A market"""
-
     id: str
     creatorUsername: str
     creatorName: str
@@ -120,7 +121,7 @@ class Market:
     creatorAvatarUrl: Optional[str] = field(kw_only=True, default=None)
     resolution: Optional[str] = field(kw_only=True, default=None)
     resolutionTime: Optional[int] = field(kw_only=True, default=None)
-    # Separating into two FullMarket types would be pointlessly annoying
+    # Separating into Lite and Full market types would be pointlessly annoying
     bets: Optional[List[Bet]] = field(kw_only=True, default=None)
     comments: Optional[List[Bet]] = field(kw_only=True, default=None)
 
@@ -205,7 +206,7 @@ class FreeResponseMarket(Market):
         raise NotImplementedError
 
 
-def get_user_by_name(username: str):
+def get_user_by_name(username: str) -> User:
     """Get the data for one user from their username
     [API reference](https://docs.manifold.markets/api#get-v0userusername)
 
@@ -217,7 +218,7 @@ def get_user_by_name(username: str):
     return User.from_json(resp.json())
 
 
-def get_user_by_id(user_id: str):
+def get_user_by_id(user_id: str) -> User:
     """Get the data for one user from their username
     [API reference](https://docs.manifold.markets/api#get-v0userby-idid)
 
@@ -227,6 +228,15 @@ def get_user_by_id(user_id: str):
     resp = requests.get(USER_ID_URL.format(user_id))
     resp.raise_for_status()
     return User.from_json(resp.json())
+
+
+def get_users() -> List[User]:
+    """Get all users
+    [API reference](https://docs.manifold.markets/api#get-v0users)
+    """
+    resp = requests.get(USERS_URL)
+    resp.raise_for_status()
+    return [User.from_json(x) for x in resp.json()]
 
 
 def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]:
@@ -258,22 +268,6 @@ def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]
     return markets
 
 
-def get_all_markets() -> List[Market]:
-    """Get all markets
-    Automatically calls the markets endpoint until all data has been read.
-    """
-    markets = get_markets(limit=1000)
-    i = markets[0].id
-    while True:
-        new_markets = get_markets(limit=1000, before=i)
-        markets.extend(new_markets)
-        if len(new_markets) < 1000:
-            break
-        else:
-            i = markets[-1].id
-    return markets
-
-
 def get_slug(slug: str) -> Market:
     """Get a market by its slug
     [API reference](https://docs.manifold.markets/api#get-v0slugmarketslug)
@@ -299,6 +293,24 @@ def get_market(market_id: str) -> Market:
         return BinaryMarket.from_json(market)
     else:
         return FreeResponseMarket.from_json(market)
+
+
+def get_all_markets() -> List[Market]:
+    """Get all markets.
+    Unlike get_markets, this will get all available markets, without a limit
+    on the number fetched.
+    Automatically calls the markets endpoint until all data has been read.
+    """
+    markets = get_markets(limit=1000)
+    i = markets[0].id
+    while True:
+        new_markets = get_markets(limit=1000, before=i)
+        markets.extend(new_markets)
+        if len(new_markets) < 1000:
+            break
+        else:
+            i = markets[-1].id
+    return markets
 
 
 def get_full_markets(reset_cache: bool = False, cache_every: int = 500) -> List[Market]:
