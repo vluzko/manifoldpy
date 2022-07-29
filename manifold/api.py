@@ -16,6 +16,7 @@ USERS_URL = V0_URL + 'users'
 ALL_MARKETS_URL = V0_URL + 'markets'
 SINGLE_MARKET_URL = V0_URL + 'market/{}'
 MARKET_SLUG_URL =  V0_URL + 'slug/{}'
+BETS_URL = V0_URL + 'bets'
 
 
 MarketT = TypeVar('MarketT', bound='Market')
@@ -56,6 +57,12 @@ class Bet:
     probBefore: float
     id: str
     outcome: str
+    isLiquidityProvision: Optional[bool]=None
+    isCancelled: Optional[bool]=None
+    orderAmount: Optional[float]=None
+    fills: Optional[float]=None
+    isFilled: Optional[bool]=None
+    limitProb: Optional[float]=None
     dpmShares: Optional[float] = None
     # TODO: Define Fees class
     fees: Optional[dict] = None
@@ -69,7 +76,7 @@ class Bet:
 
     @classmethod
     def from_json(cls, json: Any) -> "Bet":
-        return cls(**json)  # type: ignore
+        return cls(**json)
 
 
 @define
@@ -88,7 +95,7 @@ class Comment:
 
     @classmethod
     def from_json(cls, json: Any) -> "Comment":
-        return cls(**json)  # type: ignore
+        return cls(**json)
 
 
 @define
@@ -293,6 +300,29 @@ def get_market(market_id: str) -> Market:
         return BinaryMarket.from_json(market)
     else:
         return FreeResponseMarket.from_json(market)
+
+
+def get_bets(username: Optional[str]=None, market: Optional[str]=None, limit: int=1000, before: Optional[str]=None) -> List[Bet]:
+    """Get all bets.
+    [API reference](https://docs.manifold.markets/api#get-v0bets)
+
+    Args:
+        username:
+        market:
+        limit:
+        before:
+    """
+    params: Dict[str, Any] = {'limit': limit}
+    if username is not None:
+        params['username'] = username
+    if market is not None:
+        params['market'] = market
+    if before is not None:
+        params['before'] = before
+    resp = requests.get(BETS_URL, params=params)
+    resp.raise_for_status()
+
+    return [Bet.from_json(x) for x in resp.json()]
 
 
 def get_all_markets() -> List[Market]:

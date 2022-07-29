@@ -34,13 +34,14 @@ def test_get_market():
     assert market.comments is not None
 
 
-def test_get_all_markets():
-    markets = api.get_all_markets()
-    for market in markets:
-        assert market.bets is None
-        assert market.comments is None
+def test_by_slug():
+    market = api.get_slug('will-any-model-pass-an-undergrad-pr')
+    assert market.createdTime == 1657570778443
+    assert market.question == 'Will any model pass an "undergrad proofs exam" Turing test by 2027?'
 
 
+def test_get_bets():
+    bets = api.get_bets()
 
 
 def test_broken():
@@ -72,12 +73,6 @@ def test_get_market_noisy():
         assert full_market_id.question == lite_market.question
 
 
-def test_by_slug():
-    market = api.get_slug('will-any-model-pass-an-undergrad-pr')
-    assert market.createdTime == 1657570778443
-    assert market.question == 'Will any model pass an "undergrad proofs exam" Turing test by 2027?'
-
-
 def test_get_probabilities():
     """Grabs a closed market and checks it
     Could break if the market ever gets deleted.
@@ -92,3 +87,10 @@ def test_get_probabilities():
 
     assert np.isclose(probs[-1], 0.56, atol=0.01)
     assert times[-1] == 1652147977243
+
+
+def test_get_all_markets():
+    markets = api.get_all_markets()
+    for market in markets:
+        assert market.bets is None
+        assert market.comments is None
