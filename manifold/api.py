@@ -1,3 +1,4 @@
+import json
 import numpy as np
 import requests
 import pickle
@@ -6,7 +7,7 @@ from typing import Dict, List, Tuple
 from time import time
 from manifold import config
 from attr import define, field
-from typing import List, Optional, TypeVar, Type, Any
+from typing import List, Optional, TypeVar, Type, Any, Literal
 
 
 V0_URL = "https://manifold.markets/api/v0/"
@@ -18,8 +19,13 @@ SINGLE_MARKET_URL = V0_URL + "market/{}"
 MARKET_SLUG_URL = V0_URL + "slug/{}"
 BETS_URL = V0_URL + "bets"
 
+MAKE_BET_URL = V0_URL + "bet"
+CREATE_MARKET_URL = V0_URL + "market"
+RESOLVE_MARKET_URL = V0_URL + "market/{}/resolve"
+SELL_SHARES_URL = V0_URL + "market/{}/sell"
 
 MarketT = TypeVar("MarketT", bound="Market")
+OutcomeType = Literal["BINARY", "FREE_RESPONSE", "NUMERIC"]
 
 
 @define
@@ -332,6 +338,288 @@ def get_bets(
     resp.raise_for_status()
 
     return [Bet.from_json(x) for x in resp.json()]
+
+
+@define
+class APIWrapper:
+    key: str
+
+    @property
+    def headers(self) -> Dict[str, str]:
+        return {"Content-Type": "application/json", "Authorization": f"Key {self.key}"}
+
+    def _prep_bet(
+        self,
+        amount: float,
+        contractId: str,
+        outcome: str,
+        limitProb: Optional[float] = None,
+    ) -> requests.PreparedRequest:
+        """Prepare a bet POST request.
+        See `make_bet` for details.
+        """
+        data = {"amount": amount, "contractId": contractId, "outcome": outcome}
+        if limitProb is not None:
+            data["limitProb"] = limitProb
+        req = requests.Request("POST", MAKE_BET_URL, headers=self.headers, json=data)
+        prepped = req.prepare()
+        return prepped
+
+    def make_bet(
+        self,
+        amount: float,
+        contractId: str,
+        outcome: str,
+        limitProb: Optional[float] = None,
+    ) -> requests.Response:
+        """Make a bet.
+        [API reference](https://docs.manifold.markets/api#post-v0bet)
+        Args:
+            amount: The amount to bet
+            contractId: The market id.
+            outcome: The outcome to bet on. YES or NO for binary markets
+            limitProb: A limit probability for the bet. If spending the full amount would push the market past this probability, then only enough to push the market to this probability will be bought. Any additional funds will be left often as a bet that can later be matched by an opposing offer.
+        """
+        prepped = self._prep_bet(amount, contractId, outcome, limitProb=limitProb)
+        s = requests.Session()
+        return s.send(prepped)
+
+    def _prep_create(
+        self,
+        outcomeType: str,
+        question: str,
+        description: str,
+        closeTime: int,
+        tags: Optional[List[str]] = None,
+        initialProb: Optional[int] = None,
+        min: Optional[float] = None,
+        max: Optional[float] = None,
+    ) -> requests.PreparedRequest:
+        """Prepare a create market POST request
+        See `create_market` for details.
+        """
+        data = {
+            "outcomeType": outcomeType,
+            "question": question,
+            "description": {
+                "type": "doc",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": description,
+                            },
+                        ],
+                    },
+                ],
+            },
+            "closeTime": closeTime,
+        }
+        if tags is not None:
+            data["tags"] = tags
+
+        if outcomeType == "BINARY":
+            assert initialProb is not None
+            assert 1 <= initialProb <= 99
+            data["initialProb"] = initialProb
+
+        if outcomeType == "NUMERIC":
+            assert min is not None
+            assert max is not None
+            data["min"] = min
+            data["max"] = max
+        req = requests.Request(
+            "POST", CREATE_MARKET_URL, headers=self.headers, json=data
+        )
+        prepped = req.prepare()
+        return prepped
+
+    def create_market(
+        self,
+        outcomeType: OutcomeType,
+        question: str,
+        description: str,
+        closeTime: int,
+        tags: Optional[List[str]] = None,
+        initialProb: Optional[float] = None,
+        min: Optional[float] = None,
+        max: Optional[float] = None,
+    ) -> requests.Response:
+        """Create a new market
+        [API reference](https://docs.manifold.markets/api#post-v0market)
+
+        Args:
+            outcomeType: The kind of market. Must be one of BINARY, FREE_RESPONSE, or NUMERIC
+            question: The market question.
+            description: Additional details about the market
+            closeTime: When the market closes (milliseconds since epoch)
+            tags: Any tags for the market.
+        """
+        prepped = self._prep_create(
+            outcomeType,
+            question,
+            description,
+            closeTime,
+            tags=tags,
+            initialProb=initialProb,
+            min=min,
+            max=max,
+        )
+        s = requests.Session()
+        return s.send(prepped)
+
+    def _prep_resolve(
+        self,
+        market_id: str,
+        outcome: str,
+        probabilityInt: Optional[int] = None,
+        resolutions: Optional[List[Any]] = None,
+        value: Optional[Any] = None,
+    ) -> requests.PreparedRequest:
+        """Prepare a resolve market POST request
+        See `resolve_market` for details
+        """
+        # At most one of these should be set
+        assert (
+            (probabilityInt is not None)
+            + (resolutions is not None)
+            + (value is not None)
+        ) <= 1
+        data: Dict[str, Any] = {"outcome": outcome}
+        if probabilityInt is not None:
+            data["probabilityInt"] = probabilityInt
+        elif resolutions is not None:
+            data["resolutions"] = resolutions
+        elif value is not None:
+            data["value"] = value
+
+        req = requests.Request(
+            "POST",
+            RESOLVE_MARKET_URL.format(market_id),
+            headers=self.headers,
+            json=data,
+        )
+        prepped = req.prepare()
+        return prepped
+
+    def resolve_market(
+        self,
+        market_id: str,
+        outcome: str,
+        probabilityInt: Optional[int] = None,
+        resolutions: Optional[List[Any]] = None,
+        value: Optional[Any] = None,
+    ) -> requests.Response:
+        """Resolve an existing market.
+        [API reference](https://docs.manifold.markets/api#post-v0marketmarketidresolve)
+        Args:
+            market_id: The id of the market to resolve.
+            outcome: The outcome to resolve with.
+            probabilityInt: The probability to resolve with (if outcome is MKT)
+            resolutions: An array of responses and weights for each response (for resolving free responses with multiple outcomes)
+            value: The value the market resolves to (for numeric markets)
+        """
+        prepped = self._prep_resolve(
+            market_id,
+            outcome,
+            probabilityInt=probabilityInt,
+            resolutions=resolutions,
+            value=value,
+        )
+        s = requests.Session()
+        return s.send(prepped)
+
+    def _prep_sell(
+        self,
+        market_id: str,
+        outcome: Optional[str] = None,
+        shares: Optional[int] = None,
+    ) -> requests.PreparedRequest:
+        """Prepare a sell POST request.
+        See `sell_shares` for details.
+        """
+        data: Dict[str, Any] = {}
+        if outcome is not None:
+            data["outcome"] = outcome
+        if shares is not None:
+            data["shares"] = shares
+
+        req = requests.Request(
+            "POST", SELL_SHARES_URL.format(market_id), headers=self.headers, json=data
+        )
+        prepped = req.prepare()
+        return prepped
+
+    def sell_shares(
+        self,
+        market_id: str,
+        outcome: Optional[str] = None,
+        shares: Optional[int] = None,
+    ) -> requests.Response:
+        """Sell shares in a particular market
+
+        Args:
+            market_id: The market to sell shares in
+            outcome: The kind of shares to sell. Must be YES or NO.
+        """
+        prepped = self._prep_sell(market_id, outcome, shares=shares)
+        s = requests.Session()
+        return s.send(prepped)
+
+
+def make_bet(
+    key: str,
+    amount: float,
+    contractId: str,
+    outcome: str,
+    limitProb: Optional[float] = None,
+):
+    """See `APIWrapper.make_bet`"""
+    wrapper = APIWrapper(key)
+    return wrapper.make_bet(amount, contractId, outcome, limitProb=limitProb)
+
+
+def create_market(
+    key: str,
+    outcomeType: OutcomeType,
+    question: str,
+    description: str,
+    closeTime: int,
+    tags: Optional[List[str]] = None,
+    initialProb: Optional[float] = None,
+    min: Optional[float] = None,
+    max: Optional[float] = None,
+):
+    """See `APIWrapper.create_market`"""
+    wrapper = APIWrapper(key)
+    return wrapper.create_market(outcomeType, question, description, closeTime, tags)
+
+
+def resolve_market(
+    key: str,
+    market_id: str,
+    outcome: str,
+    probabilityInt: Optional[int] = None,
+    resolutions: Optional[List[Any]] = None,
+    value: Optional[Any] = None,
+):
+    """See `APIWrapper.resolve_market`"""
+    wrapper = APIWrapper(key)
+    return wrapper.resolve_market(
+        market_id,
+        outcome,
+        probabilityInt=probabilityInt,
+        resolutions=resolutions,
+        value=value,
+    )
+
+
+def sell_shares(key: str, market_id: str, outcome: str, shares: Optional[int] = None):
+    """See `APIWrapper.sell_shares`"""
+    wrapper = APIWrapper(key)
+    return wrapper.sell_shares(market_id, outcome, shares=shares)
 
 
 def get_all_markets() -> List[Market]:
