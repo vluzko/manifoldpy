@@ -119,16 +119,16 @@ def test_create_market_prepared():
         "Some elaboration.",
         1659896688,
         tags=None,
-        initialProb=0.5,
+        initialProb=50,
     )
     assert prepped.headers == {
         "Content-Type": "application/json",
         "Authorization": "Key no_key",
-        "Content-Length": "135",
+        "Content-Length": "226",
     }
     assert (
         prepped.body
-        == b'{"outcomeType": "BINARY", "question": "Test question", "description": "Some elaboration.", "closeTime": 1659896688, "initialProb": 50}'
+        == b'{"outcomeType": "BINARY", "question": "Test question", "description": {"type": "doc", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Some elaboration."}]}]}, "closeTime": 1659896688, "initialProb": 50}'
     )
 
 

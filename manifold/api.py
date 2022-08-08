@@ -391,7 +391,7 @@ class APIWrapper:
         description: str,
         closeTime: int,
         tags: Optional[List[str]] = None,
-        initialProb: Optional[float] = None,
+        initialProb: Optional[int] = None,
         min: Optional[float] = None,
         max: Optional[float] = None,
     ) -> requests.PreparedRequest:
@@ -422,6 +422,7 @@ class APIWrapper:
 
         if outcomeType == "BINARY":
             assert initialProb is not None
+            assert 1 <= initialProb <= 99
             data["initialProb"] = initialProb
 
         if outcomeType == "NUMERIC":
