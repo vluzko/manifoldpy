@@ -44,7 +44,7 @@ def test_by_slug():
 
 
 def test_get_bets():
-    bets = api.get_bets()
+    api.get_bets()
 
 
 def test_broken():
@@ -98,3 +98,58 @@ def test_get_all_markets():
     for market in markets:
         assert market.bets is None
         assert market.comments is None
+
+
+def test_bet_prepared():
+    wrapper = api.APIWrapper("no_key")
+    prepped = wrapper._prep_bet(10, "1", "YES")
+    assert prepped.headers == {
+        "Content-Type": "application/json",
+        "Authorization": "Key no_key",
+        "Content-Length": "51",
+    }
+    assert prepped.body == b'{"amount": 10, "contractId": "1", "outcome": "YES"}'
+
+
+def test_create_market_prepared():
+    wrapper = api.APIWrapper("no_key")
+    prepped = wrapper._prep_create(
+        "BINARY",
+        "Test question",
+        "Some elaboration.",
+        1659896688,
+        tags=None,
+        initialProb=50,
+    )
+    assert prepped.headers == {
+        "Content-Type": "application/json",
+        "Authorization": "Key no_key",
+        "Content-Length": "226",
+    }
+    assert (
+        prepped.body
+        == b'{"outcomeType": "BINARY", "question": "Test question", "description": {"type": "doc", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Some elaboration."}]}]}, "closeTime": 1659896688, "initialProb": 50}'
+    )
+
+
+def test_resolve_market_prepared():
+    wrapper = api.APIWrapper("no_key")
+    prepped = wrapper._prep_resolve("1", "YES")
+    assert prepped.headers == {
+        "Content-Type": "application/json",
+        "Authorization": "Key no_key",
+        "Content-Length": "18",
+    }
+    assert prepped.body == b'{"outcome": "YES"}'
+
+
+def test_sell_prepared():
+    wrapper = api.APIWrapper("no_key")
+    prepped = wrapper._prep_sell("1", "YES", 5)
+    assert prepped.headers == {
+        "Content-Type": "application/json",
+        "Authorization": "Key no_key",
+        "Content-Length": "31",
+    }
+
+    assert prepped.body == b'{"outcome": "YES", "shares": 5}'
