@@ -1,8 +1,5 @@
 attrs==22.1.0
-<<<<<<< HEAD
-=======
 matplotlib==3.5.2
->>>>>>> b1f7a5be87ff55dcf1b04c20fe7cf7952a8ecf3c
 numpy==1.23.1
 pytest==7.1.2
 requests==2.28.1
