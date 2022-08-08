@@ -76,9 +76,9 @@ def beta_binomial_calibration(
     """Calculate calibration with a beta-binomial model
 
     Args:
-        yes_probs:
-        no_probs:
-        decimals:
+        yes_probs: The probabilities assigned to all YES outcomes
+        no_probs: The probabilities assigned to all NO outcomes
+        decimals: The
 
     Returns
         0.95 confidence interval and means for the distributions.
