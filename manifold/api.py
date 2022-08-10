@@ -66,6 +66,7 @@ class Bet:
     probBefore: float
     id: str
     outcome: str
+    challengeSlug: Optional[str] = None
     isLiquidityProvision: Optional[bool] = None
     isCancelled: Optional[bool] = None
     orderAmount: Optional[float] = None
