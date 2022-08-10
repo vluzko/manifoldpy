@@ -6,7 +6,7 @@ import pickle
 
 from typing import Dict, List, Tuple
 from time import time
-from manifold import config
+from manifoldpy import config
 from attr import define, field
 from typing import List, Optional, TypeVar, Type, Any, Literal
 

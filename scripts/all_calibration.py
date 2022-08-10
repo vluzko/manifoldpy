@@ -4,7 +4,7 @@ Currently only works for binary markets.
 import numpy as np
 
 from matplotlib import pyplot as plt
-from manifold import api, calibration
+from manifoldpy import api, calibration
 
 
 def plot_calibration(c_table: np.ndarray, bins: np.ndarray):
