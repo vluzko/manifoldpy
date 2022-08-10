@@ -2,7 +2,7 @@ import numpy as np
 import random
 import pytest
 from requests import HTTPError
-from manifold import api
+from manifoldpy import api
 
 
 def test_get_user_by_name():

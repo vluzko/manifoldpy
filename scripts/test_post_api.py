@@ -1,6 +1,6 @@
 from time import time
 from sys import argv
-from manifold import api
+from manifoldpy import api
 
 
 def make_market():

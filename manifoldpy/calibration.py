@@ -1,5 +1,5 @@
 import numpy as np
-from manifold.api import Market, BinaryMarket
+from manifoldpy.api import Market, BinaryMarket
 from matplotlib import pyplot as plt
 from scipy.stats import beta
 from typing import List, Tuple

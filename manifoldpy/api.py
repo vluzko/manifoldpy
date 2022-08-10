@@ -6,7 +6,7 @@ import pickle
 
 from typing import Dict, List, Tuple
 from time import time
-from manifold import config
+from manifoldpy import config
 from attr import define, field
 from typing import List, Optional, TypeVar, Type, Any, Literal
 
@@ -66,6 +66,7 @@ class Bet:
     probBefore: float
     id: str
     outcome: str
+    challengeSlug: Optional[str] = None
     isLiquidityProvision: Optional[bool] = None
     isCancelled: Optional[bool] = None
     orderAmount: Optional[float] = None
