@@ -1,14 +1,12 @@
 """API bindings"""
-import json
 import numpy as np
 import requests
 import pickle
 
-from typing import Dict, List, Tuple
+from attr import define, field
+from typing import Dict, List, Tuple, List, Optional, TypeVar, Type, Any, Literal
 from time import time
 from manifoldpy import config
-from attr import define, field
-from typing import List, Optional, TypeVar, Type, Any, Literal
 
 
 V0_URL = "https://manifold.markets/api/v0/"
@@ -26,7 +24,18 @@ RESOLVE_MARKET_URL = V0_URL + "market/{}/resolve"
 SELL_SHARES_URL = V0_URL + "market/{}/sell"
 
 MarketT = TypeVar("MarketT", bound="Market")
-OutcomeType = Literal["BINARY", "FREE_RESPONSE", "NUMERIC"]
+OutcomeType = Literal[
+    "BINARY", "FREE_RESPONSE", "NUMERIC", "PSEUDO_NUMERIC", "MULTIPLE_CHOICE"
+]
+T = TypeVar("T")
+
+
+def weak_structure(json: dict, cls: Type[T]) -> T:
+    fields = {}
+    for f in cls.__attrs_attrs__:  # type: ignore
+        val = json.get(f.name, f.default)
+        fields[f.name] = val
+    return cls(**fields)
 
 
 @define
@@ -41,17 +50,13 @@ class User:
     avatarUrl: str
     balance: float
     totalDeposits: float
-    profitCached: Dict[str, float]
+    profitCached: Dict[str, Optional[float]]
     creatorVolumeCached: Dict[str, float]
     bio: Optional[str] = None
     twitterHandle: Optional[str] = None
     discordHandle: Optional[str] = None
     bannerUrl: Optional[str] = None
     website: Optional[str] = None
-
-    @classmethod
-    def from_json(cls, json: Any) -> "User":
-        return cls(**json)
 
 
 @define
@@ -84,10 +89,6 @@ class Bet:
     isAnte: Optional[bool] = None
     userId: Optional[str] = None
 
-    @classmethod
-    def from_json(cls, json: Any) -> "Bet":
-        return cls(**json)
-
 
 @define
 class Comment:
@@ -103,10 +104,6 @@ class Comment:
     userName: str
     betId: Optional[str] = None
     answerOutcome: Optional[str] = None
-
-    @classmethod
-    def from_json(cls, json: Any) -> "Comment":
-        return cls(**json)
 
 
 @define
@@ -129,7 +126,7 @@ class Market:
     volume: float
     volume7Days: float
     volume24Hours: float
-    outcomeType: str
+    outcomeType: OutcomeType
     mechanism: str
     isResolved: bool
     resolutionProbability: Optional[float] = field(kw_only=True, default=None)
@@ -148,7 +145,7 @@ class Market:
     description: Optional[str] = field(kw_only=True, default=None)
     textDescription: Optional[str] = field(kw_only=True, default=None)
     bets: Optional[List[Bet]] = field(kw_only=True, default=None)
-    comments: Optional[List[Bet]] = field(kw_only=True, default=None)
+    comments: Optional[List[Comment]] = field(kw_only=True, default=None)
 
     @property
     def slug(self) -> str:
@@ -170,15 +167,31 @@ class Market:
         """Get the final probability of this market"""
         raise NotImplementedError
 
-    @classmethod
-    def from_json(cls: Type[MarketT], json: Any) -> MarketT:
-        # TODO: *Maybe* clean this up. The API is pretty inconsistent and I don't really see the
-        # benefit of handling all the idiosyncracies.
-        # if 'bets' in json:
-        #     json['bets'] = [Bet.from_json(bet) for bet in json['bets']]
-        # if 'comments' in json:
-        #     json['comments'] = [Comment.from_json(comment) for comment in json['comments']]
-        return cls(**json)  # type: ignore
+    @staticmethod
+    def from_json(json: Any) -> "Market":
+        market: Market
+        if "bets" in json:
+            json["bets"] = [weak_structure(x, Bet) for x in json["bets"]]
+        if "comments" in json:
+            json["comments"] = [weak_structure(x, Comment) for x in json["comments"]]
+
+        cls: Type["Market"]
+        if json["outcomeType"] == "BINARY":
+            cls = BinaryMarket
+        elif json["outcomeType"] == "FREE_RESPONSE":
+            cls = FreeResponseMarket
+        elif json["outcomeType"] == "NUMERIC":
+            cls = NumericMarket
+        elif json["outcomeType"] == "PSEUDO_NUMERIC":
+            cls = PseudoNumericMarket
+        elif json["outcomeType"] == "MULTIPLE_CHOICE":
+            cls = MultipleChoiceMarket
+        else:
+            raise ValueError(
+                f'{json["outcomeType"]} isn\'t a known market outcome type. Submit a bug report if the json came from the API.'
+            )
+        market = weak_structure(json, cls)
+        return market
 
 
 @define
@@ -186,8 +199,6 @@ class BinaryMarket(Market):
     """A market with a binary resolution
     Attributes:
         probability: The current resolution probability
-        p: Something to do with CFMM markets
-        totalLiquidity: Also something to do with CFMM markets
     """
 
     probability: float
@@ -202,14 +213,13 @@ class BinaryMarket(Market):
         if len(self.bets) == 0:
             return np.array([self.createdTime]), np.array([self.probability])
         else:
-            # TODO: Fix the string access after the API is cleaned up
-            start_prob = self.bets[0]["probBefore"]
+            start_prob = self.bets[-1].probBefore
             start_time = self.createdTime
             times, probabilities = zip(
-                *[(bet["createdTime"], bet["probAfter"]) for bet in self.bets]
+                *[(bet.createdTime, bet.probAfter) for bet in self.bets]
             )
-            return np.array((start_time, *times)), np.array(
-                (start_prob, *probabilities)
+            return np.array((*times, start_time)), np.array(
+                (*probabilities, start_prob)
             )
 
     def start_probability(self) -> float:
@@ -231,6 +241,21 @@ class FreeResponseMarket(Market):
         raise NotImplementedError
 
 
+@define
+class NumericMarket(Market):
+    pass
+
+
+@define
+class PseudoNumericMarket(Market):
+    pass
+
+
+@define
+class MultipleChoiceMarket(Market):
+    pass
+
+
 def get_user_by_name(username: str) -> User:
     """Get the data for one user from their username
     [API reference](https://docs.manifold.markets/api#get-v0userusername)
@@ -240,7 +265,7 @@ def get_user_by_name(username: str) -> User:
     """
     resp = requests.get(USERNAME_URL.format(username))
     resp.raise_for_status()
-    return User.from_json(resp.json())
+    return weak_structure(resp.json(), User)
 
 
 def get_user_by_id(user_id: str) -> User:
@@ -252,7 +277,7 @@ def get_user_by_id(user_id: str) -> User:
     """
     resp = requests.get(USER_ID_URL.format(user_id))
     resp.raise_for_status()
-    return User.from_json(resp.json())
+    return weak_structure(resp.json(), User)
 
 
 def get_users() -> List[User]:
@@ -261,7 +286,7 @@ def get_users() -> List[User]:
     """
     resp = requests.get(USERS_URL)
     resp.raise_for_status()
-    return [User.from_json(x) for x in resp.json()]
+    return [weak_structure(x, User) for x in resp.json()]
 
 
 def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]:
@@ -286,7 +311,7 @@ def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]
     markets = [
         BinaryMarket.from_json(x)
         if "probability" in x
-        else FreeResponseMarket.from_json(x)
+        else weak_structure(x, FreeResponseMarket)
         for x in json
     ]
 
@@ -300,6 +325,7 @@ def get_slug(slug: str) -> Market:
     market = requests.get(MARKET_SLUG_URL.format(slug)).json()
     if "probability" in market:
         return BinaryMarket.from_json(market)
+
     else:
         return FreeResponseMarket.from_json(market)
 
@@ -314,10 +340,7 @@ def get_market(market_id: str) -> Market:
     resp = requests.get(SINGLE_MARKET_URL.format(market_id), timeout=20)
     resp.raise_for_status()
     market = resp.json()
-    if "probability" in market:
-        return BinaryMarket.from_json(market)
-    else:
-        return FreeResponseMarket.from_json(market)
+    return Market.from_json(market)
 
 
 def get_bets(
@@ -345,7 +368,7 @@ def get_bets(
     resp = requests.get(BETS_URL, params=params)
     resp.raise_for_status()
 
-    return [Bet.from_json(x) for x in resp.json()]
+    return [weak_structure(x, Bet) for x in resp.json()]
 
 
 @define

@@ -16,6 +16,7 @@ classifiers = [
 
 dependencies = [
     "attrs==22.1.0",
+    "cattrs==",
     "matplotlib==3.5.2",
     "numpy==1.23.1",
     "requests==2.28.1",
