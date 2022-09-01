@@ -86,11 +86,11 @@ def test_get_probabilities():
     market = api.get_market(market_id)
     times, probs = market.get_updates()
     assert len(times) == len(probs) == 23
-    assert probs[0] == 0.33
-    assert times[0] == market.createdTime
+    assert probs[-1] == 0.33
+    assert times[-1] == market.createdTime
 
-    assert np.isclose(probs[-1], 0.56, atol=0.01)
-    assert times[-1] == 1652147977243
+    assert np.isclose(probs[0], 0.56, atol=0.01)
+    assert times[0] == 1652147977243
 
 
 def test_get_all_markets():
