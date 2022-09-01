@@ -123,7 +123,6 @@ class Market:
     creatorName: str
     createdTime: int
     question: str
-    description: str
     tags: List[str]
     url: str
     pool: Dict[str, float]
@@ -137,10 +136,17 @@ class Market:
     p: Optional[float] = field(kw_only=True, default=None)
     totalLiquidity: Optional[float] = field(kw_only=True, default=None)
     closeTime: Optional[int] = field(kw_only=True, default=None)
+    creatorId: Optional[str] = field(kw_only=True, default=None)
+    lastUpdatedTime: Optional[int] = field(kw_only=True, default=None)
     creatorAvatarUrl: Optional[str] = field(kw_only=True, default=None)
     resolution: Optional[str] = field(kw_only=True, default=None)
     resolutionTime: Optional[int] = field(kw_only=True, default=None)
+    min: Optional[int] = field(kw_only=True, default=None)
+    max: Optional[int] = field(kw_only=True, default=None)
+    isLogScale: Optional[bool] = field(kw_only=True, default=None)
     # Separating into Lite and Full market types would be pointlessly annoying
+    description: Optional[str] = field(kw_only=True, default=None)
+    textDescription: Optional[str] = field(kw_only=True, default=None)
     bets: Optional[List[Bet]] = field(kw_only=True, default=None)
     comments: Optional[List[Bet]] = field(kw_only=True, default=None)
 

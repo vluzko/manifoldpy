@@ -42,4 +42,4 @@ def calibration_at_start():
 
 
 if __name__ == "__main__":
-    calibration_at_start()
+    calibration_at_close()
