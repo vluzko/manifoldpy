@@ -10,7 +10,8 @@ Welcome to manifoldpy's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   manifold
+   manifoldpy
+   modules
 
 
 Indices and tables

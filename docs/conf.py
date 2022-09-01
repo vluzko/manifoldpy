@@ -8,7 +8,7 @@
 import sys
 import os
 
-sys.path.insert(0, os.path.abspath("../manifold/"))
+sys.path.insert(0, os.path.abspath("../manifoldpy/"))
 
 project = "manifoldpy"
 copyright = "2022, Vincent Luczkow"

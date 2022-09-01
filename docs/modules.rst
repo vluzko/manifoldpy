@@ -1,7 +1,7 @@
-manifold
-========
+manifoldpy
+==========
 
 .. toctree::
    :maxdepth: 4
 
-   manifold
+   manifoldpy
