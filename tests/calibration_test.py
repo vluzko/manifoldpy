@@ -54,3 +54,11 @@ def test_beta_binomial_calibration():
     alpha = 1 + len([x for x in mkts if x.resolution == "YES"])
     beta = len(mkts) - (alpha - 1) + 1
     assert means[7] == alpha / (alpha + beta)
+
+
+def test_perfect_calibration():
+
+    assert np.isclose(
+        calibration.perfect_calibration(1),
+        np.array([0.025, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.975]),
+    ).all()

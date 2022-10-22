@@ -2,9 +2,10 @@
 Currently only works for binary markets.
 """
 import numpy as np
+import pickle
 
 from matplotlib import pyplot as plt
-from manifoldpy import api, calibration
+from manifoldpy import api, calibration, config
 
 
 def plot_calibration(c_table: np.ndarray, bins: np.ndarray):
@@ -22,24 +23,43 @@ def plot_calibration(c_table: np.ndarray, bins: np.ndarray):
     plt.show()
 
 
-def calibration_at_close():
-    binary = [x for x in api.get_markets() if isinstance(x, api.BinaryMarket)]
-    yes_probs, no_probs = calibration.extract_binary_probabilities(binary)
-    calibration.overall_calibration(yes_probs, no_probs)
-
-
-def calibration_at_start():
+def run_bundle():
+    """Evaluate calibration at start, end, midway, and for individual groups"""
+    market_cache = pickle.load(config.CACHE_LOC.open("rb"))
+    full_markets = [x["market"] for x in market_cache.values()]
     binary = [
-        m
-        for m in api.get_full_markets()
-        if isinstance(m, api.BinaryMarket) and m.isResolved
+        m for m in full_markets if isinstance(m, api.BinaryMarket) and m.isResolved
     ]
-    yes_probs = np.array(
-        [m.start_probability() for m in binary if m.resolution == "YES"]
-    )
-    no_probs = np.array([m.start_probability() for m in binary if m.resolution == "NO"])
+    df, histories = calibration.build_dataframe(binary)
+    # Probabilities at the halfway point
+    starts = np.array([h[0][0] for h in histories])
+    ends = np.array([h[0][-1] for h in histories])
+    midpoints = (starts + ends) * 0.5
+    df["midway"] = calibration.probability_at_time(histories, midpoints)
+
+    yes_markets = df[df["resolution"] == "YES"]
+    no_markets = df[df["resolution"] == "NO"]
+
+    # Calibration at start
+    print("Start")
+    yes_probs = yes_markets["start"]
+    no_probs = no_markets["start"]
+    calibration.overall_calibration(yes_probs, no_probs)
+    print()
+
+    # Calibration at end
+    print("End")
+    yes_probs = yes_markets["final"]
+    no_probs = no_markets["final"]
+    calibration.overall_calibration(yes_probs, no_probs)
+    print()
+
+    # Calibration at midpoint
+    print("Midpoint")
+    yes_probs = yes_markets["midway"]
+    no_probs = no_markets["midway"]
     calibration.overall_calibration(yes_probs, no_probs)
 
 
 if __name__ == "__main__":
-    calibration_at_close()
+    run_bundle()

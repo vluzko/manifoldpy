@@ -159,6 +159,12 @@ class Market:
         """
         raise NotImplementedError
 
+    def num_traders(self) -> int:
+        raise NotImplementedError
+
+    def probability_history(self) -> Tuple[np.ndarray, np.ndarray]:
+        raise NotImplementedError
+
     def start_probability(self) -> float:
         """Get the starting probability of the market"""
         raise NotImplementedError
@@ -222,11 +228,46 @@ class BinaryMarket(Market):
                 (*probabilities, start_prob)
             )
 
+    def num_traders(self) -> int:
+        if self.bets is None:
+            return 0
+        else:
+            unique_traders = {b.userId for b in self.bets}
+            return len(unique_traders)
+
+    def probability_history(self) -> Tuple[np.ndarray, np.ndarray]:
+        assert (
+            self.bets is not None
+        ), "Call get_market before accessing probability history"
+        if len(self.bets) == 0:
+            times, probabilities = np.array([self.createdTime]), np.array(
+                [self.probability]
+            )
+        else:
+            start_prob = self.bets[-1].probBefore
+            start_time = self.createdTime
+            t_iter, p_iter = zip(
+                *[(bet.createdTime, bet.probAfter) for bet in reversed(self.bets)]
+            )
+            times, probabilities = np.array((start_time, *t_iter)), np.array(
+                (start_prob, *p_iter)
+            )
+        return times, probabilities
+
     def start_probability(self) -> float:
-        return self.get_updates()[1][0]
+        return self.probability_history()[1][0]
 
     def final_probability(self) -> float:
-        return self.probability
+        return self.probability_history()[1][-1]
+
+    def probability_at_time(self, timestamp: int):
+        times, probs = self.probability_history()
+        if timestamp <= times[0]:
+            raise ValueError("Timestamp before market creation")
+        elif timestamp >= times[-1]:
+            return probs[-1]
+        else:
+            raise NotImplementedError
 
 
 @define
@@ -685,35 +726,34 @@ def get_full_markets(reset_cache: bool = False, cache_every: int = 500) -> List[
             full_markets = pickle.load(config.CACHE_LOC.open("rb"))
         except FileNotFoundError:
             full_markets = {}
-        # Indicates the cache is out of date and needs to be overwritten anyway
-        except ModuleNotFoundError:
-            full_markets = {}
-            pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
     else:
         full_markets = {}
-        pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
+        import pdb
 
-    lite_markets = get_markets()
-    print(f"Fetching {len(lite_markets)} markets")
-    missed_markets = []
-    for i, lmarket in enumerate(lite_markets):
-        if lmarket.id in full_markets:
-            continue
-        else:
-            try:
-                full_market = get_market(lmarket.id)
-                full_markets[full_market.id] = {
-                    "market": full_market,
-                    "cache_time": time(),
-                }
-            # If we get an HTTP Error, just skip that market
-            except requests.HTTPError:
-                missed_markets.append(lmarket.id)
+        pdb.set_trace()
+        pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
+    lite_markets = get_all_markets()
+    print(f"Fetched {len(lite_markets)} markets")
+    cached_ids = {x["market"].id for x in full_markets.values()}
+    lite_ids = {x.id for x in lite_markets}
+    missing_markets = lite_ids - cached_ids
+    print(f"Need {len(missing_markets)} new markets.")
+    missed = []
+    for i, lmarket_id in enumerate(missing_markets):
+        try:
+            full_market = get_market(lmarket_id)
+            full_markets[full_market.id] = {
+                "market": full_market,
+                "cache_time": time(),
+            }
+        # If we get an HTTP Error, just skip that market
+        except requests.HTTPError:
+            missed.append(lmarket_id)
 
         if i % cache_every == 0:
             print(i)
             pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
     pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
     market_list = [x["market"] for x in full_markets.values()]
-    print(f"Could not get {len(missed_markets)} markets.")
+    print(f"Could not get {len(missed)} markets.")
     return market_list
