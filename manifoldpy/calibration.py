@@ -137,25 +137,32 @@ def plot_beta_binomial(upper_lower: np.ndarray, means: np.ndarray, decimals):
 
 def overall_calibration(
     yes_probs: np.ndarray, no_probs: np.ndarray
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Args:
+        yes_probs: The probabilities of all markets that resolved YES.
+        no_probs: The probabilities of all markets that resolved NO.
+
+    Returns:
+        1% calibration, 10% calibration, beta-binomial model means, beta-binomial model 95% CI
+    """
     scoring_rules = {"Brier": brier_score, "Log": log_score}
     scores = {k: v(yes_probs, no_probs) for k, v in scoring_rules.items()}
     print("\n".join(f"{k}: {v}" for k, v in scores.items()))
 
-    # Calibration with 101 bins
+    # Calibration at 1%
     one_percent = binary_calibration(yes_probs, no_probs, decimals=2)
 
-    # Calibration with 11 bins
+    # Calibration at 10%
     ten_percent = binary_calibration(yes_probs, no_probs, decimals=1)
     print(ten_percent)
     print(ten_percent - perfect_calibration(1))
 
-    # Calibration when we model each bin as with a beta binomial model
+    # Beta-binomial calibration at 10%
     beta_interval, beta_means = beta_binomial_calibration(
         yes_probs, no_probs, decimals=1
     )
-    # plot_beta_binomial(beta_interval, beta_means, decimals=1)
-    return one_percent, ten_percent
+    return one_percent, ten_percent, beta_interval, beta_means
 
 
 def build_dataframe(
