@@ -10,8 +10,9 @@ jobs:
     executor: python/default
     steps:
       - checkout
-      - python/install-packages:
-          pkg-manager: pip
+      - run:
+          name: Install
+          command: pip install .[dev]
       - run:
           name: Run tests
           command: python -m pytest
