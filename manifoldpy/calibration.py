@@ -4,7 +4,7 @@ import pandas as pd
 from manifoldpy.api import Market, BinaryMarket
 from matplotlib import pyplot as plt
 from scipy.stats import beta
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 
 def perfect_calibration(decimals: int) -> np.ndarray:
@@ -80,9 +80,6 @@ def binary_calibration(
         The `i`th element of the returned array is the fraction of markets at that confidence level that resolved true.
     """
     all_vals = bet_counts(yes_probs, no_probs, decimals)
-    # import pdb
-    # pdb.set_trace()
-    # calibration = all_vals[:, 0] / all_vals.sum(axis=1)
     pred_true = all_vals[:, 0]
     all_preds = all_vals.sum(axis=1)
     calibration = np.divide(
@@ -135,10 +132,26 @@ def plot_beta_binomial(upper_lower: np.ndarray, means: np.ndarray, decimals):
     plt.show()
 
 
-def overall_calibration(
+def plot_calibration(c_table: np.ndarray, bins: np.ndarray):
+    _, ax = plt.subplots()
+    ax.scatter(bins, c_table)
+    # Perfect calibration line
+    l = np.arange(0, bins.max(), 0.0001)
+    ax.scatter(l, l, color="green", s=0.01, label="Perfect calibration")
+
+    ax.set_xticks(np.arange(0, 1 + 1 / 10, 1 / 10))
+    ax.set_xlabel("Market probability")
+    ax.set_yticks(np.arange(0, 1 + 1 / 10, 1 / 10))
+    ax.set_ylabel("Empirical probability")
+
+    plt.show()
+
+
+def market_set_accuracy(
     yes_probs: np.ndarray, no_probs: np.ndarray
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
+    """Compute common metrics for a set of markets
+
     Args:
         yes_probs: The probabilities of all markets that resolved YES.
         no_probs: The probabilities of all markets that resolved NO.
@@ -148,21 +161,18 @@ def overall_calibration(
     """
     scoring_rules = {"Brier": brier_score, "Log": log_score}
     scores = {k: v(yes_probs, no_probs) for k, v in scoring_rules.items()}
-    print("\n".join(f"{k}: {v}" for k, v in scores.items()))
 
     # Calibration at 1%
     one_percent = binary_calibration(yes_probs, no_probs, decimals=2)
 
     # Calibration at 10%
     ten_percent = binary_calibration(yes_probs, no_probs, decimals=1)
-    print(ten_percent)
-    print(ten_percent - perfect_calibration(1))
 
     # Beta-binomial calibration at 10%
     beta_interval, beta_means = beta_binomial_calibration(
         yes_probs, no_probs, decimals=1
     )
-    return one_percent, ten_percent, beta_interval, beta_means
+    return one_percent, ten_percent, beta_interval, beta_means, scores
 
 
 def build_dataframe(
@@ -177,7 +187,7 @@ def build_dataframe(
         Tuple[pd.DataFrame, Tuple[np.ndarray, np.ndarray]]: The dataframe, and a list of betting histories for every market.
     """
     columns = ["id", "num_trades", "resolution", "volume", "tags"]
-    simple_fields = [(x.id, len(x.bets), x.resolution, x.volume, x.tags) for x in markets]  # type: ignore
+    simple_fields = [(x.id, len(x.bets), x.resolution, x.volume, tuple(y.lower() for y in x.tags)) for x in markets]  # type: ignore
     df = pd.DataFrame(simple_fields, columns=columns)
 
     histories = [x.probability_history() for x in markets]
@@ -196,3 +206,10 @@ def probability_at_time(
     # Slower, but probably easier to understand
     probabilities = np.array([h[1][i] for h, i in zip(histories, indices)])
     return probabilities
+
+
+def markets_by_group(df: pd.DataFrame) -> Dict[str, pd.Series]:
+    """Get a dict group -> group's markets"""
+    all_tags = {y for x in df.tags.unique() for y in x}
+    filters = {x: df.tags.apply(lambda y: x in y) for x in all_tags}
+    return filters

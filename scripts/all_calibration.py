@@ -8,22 +8,38 @@ from matplotlib import pyplot as plt
 from manifoldpy import api, calibration, config
 
 
-def plot_calibration(c_table: np.ndarray, bins: np.ndarray):
-    _, ax = plt.subplots()
-    ax.scatter(bins, c_table)
-    # Perfect calibration line
-    l = np.arange(0, bins.max(), 0.0001)
-    ax.scatter(l, l, color="green", s=0.01, label="Perfect calibration")
+def group_calibration_at_close():
+    market_cache = pickle.load(config.CACHE_LOC.open("rb"))
+    full_markets = [x["market"] for x in market_cache.values()]
+    binary = [
+        m for m in full_markets if isinstance(m, api.BinaryMarket) and m.isResolved
+    ]
+    df, histories = calibration.build_dataframe(binary)
+    # Group calibration
+    groups = calibration.markets_by_group(df)
+    results = {}
+    for group_name, f in groups.items():
+        markets = df[f]
+        if len(markets) < 10:
+            continue
+        yes_markets = markets[markets["resolution"] == "YES"]
+        yes_count = len(
+            yes_markets[(yes_markets["final"] < 0.95) & (yes_markets["final"] > 0.85)]
+        )
+        no_markets = markets[markets["resolution"] == "NO"]
+        no_count = len(
+            no_markets[(no_markets["final"] < 0.95) & (no_markets["final"] > 0.85)]
+        )
+        if yes_count + no_count < 10:
+            continue
+        res = calibration.binary_calibration(yes_markets["final"], no_markets["final"])[
+            -2
+        ]
+        results[group_name] = res
+    print(results)
 
-    ax.set_xticks(np.arange(0, 1 + 1 / 10, 1 / 10))
-    ax.set_xlabel("Market probability")
-    ax.set_yticks(np.arange(0, 1 + 1 / 10, 1 / 10))
-    ax.set_ylabel("Empirical probability")
 
-    plt.show()
-
-
-def run_bundle():
+def overall_calibration():
     """Evaluate calibration at start, end, midway, and for individual groups"""
     market_cache = pickle.load(config.CACHE_LOC.open("rb"))
     full_markets = [x["market"] for x in market_cache.values()]
@@ -41,25 +57,20 @@ def run_bundle():
     no_markets = df[df["resolution"] == "NO"]
 
     # Calibration at start
-    print("Start")
     yes_probs = yes_markets["start"]
     no_probs = no_markets["start"]
-    calibration.overall_calibration(yes_probs, no_probs)
-    print()
+    res = calibration.market_set_accuracy(yes_probs, no_probs)
 
     # Calibration at end
-    print("End")
     yes_probs = yes_markets["final"]
     no_probs = no_markets["final"]
-    calibration.overall_calibration(yes_probs, no_probs)
-    print()
+    res = calibration.market_set_accuracy(yes_probs, no_probs)
 
     # Calibration at midpoint
-    print("Midpoint")
     yes_probs = yes_markets["midway"]
     no_probs = no_markets["midway"]
-    calibration.overall_calibration(yes_probs, no_probs)
+    res = calibration.market_set_accuracy(yes_probs, no_probs)
 
 
 if __name__ == "__main__":
-    run_bundle()
+    group_calibration_at_close()
