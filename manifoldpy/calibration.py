@@ -1,8 +1,18 @@
+import bisect
 import numpy as np
+import pandas as pd
 from manifoldpy.api import Market, BinaryMarket
 from matplotlib import pyplot as plt
 from scipy.stats import beta
-from typing import List, Tuple
+from typing import Dict, List, Tuple
+
+
+def perfect_calibration(decimals: int) -> np.ndarray:
+    p = np.linspace(0, 1, 10**decimals + 1)
+    p[0] = p[1] * 0.25
+    t = (p[-2] + 1) / 2
+    p[-1] = (t + 1) / 2
+    return p
 
 
 def extract_binary_probabilities(
@@ -62,10 +72,19 @@ def bet_counts(
 def binary_calibration(
     yes_probs: np.ndarray, no_probs: np.ndarray, decimals: int = 1
 ) -> np.ndarray:
-    """Calculate binary calibration across all passed markets"""
-    all_vals = bet_counts(yes_probs, no_probs, decimals)
+    """Calculate binary calibration across all passed markets
 
-    calibration = all_vals[:, 0] / all_vals.sum(axis=1)
+    Returns:
+        An array containing the fraction of markets that actually resolved yes for the corresponding bucket.
+        Buckets are constructed based on the value of `decimals`, and generally will be 10^decimals + 1.
+        The `i`th element of the returned array is the fraction of markets at that confidence level that resolved true.
+    """
+    all_vals = bet_counts(yes_probs, no_probs, decimals)
+    pred_true = all_vals[:, 0]
+    all_preds = all_vals.sum(axis=1)
+    calibration = np.divide(
+        pred_true, all_preds, out=np.zeros_like(all_preds), where=all_preds != 0
+    )
 
     return calibration
 
@@ -113,21 +132,84 @@ def plot_beta_binomial(upper_lower: np.ndarray, means: np.ndarray, decimals):
     plt.show()
 
 
-def overall_calibration(yes_probs: np.ndarray, no_probs: np.ndarray, decimals: int = 1):
+def plot_calibration(c_table: np.ndarray, bins: np.ndarray):
+    _, ax = plt.subplots()
+    ax.scatter(bins, c_table)
+    # Perfect calibration line
+    l = np.arange(0, bins.max(), 0.0001)
+    ax.scatter(l, l, color="green", s=0.01, label="Perfect calibration")
+
+    ax.set_xticks(np.arange(0, 1 + 1 / 10, 1 / 10))
+    ax.set_xlabel("Market probability")
+    ax.set_yticks(np.arange(0, 1 + 1 / 10, 1 / 10))
+    ax.set_ylabel("Empirical probability")
+
+    plt.show()
+
+
+def market_set_accuracy(
+    yes_probs: np.ndarray, no_probs: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Compute common metrics for a set of markets
+
+    Args:
+        yes_probs: The probabilities of all markets that resolved YES.
+        no_probs: The probabilities of all markets that resolved NO.
+
+    Returns:
+        1% calibration, 10% calibration, beta-binomial model means, beta-binomial model 95% CI
+    """
     scoring_rules = {"Brier": brier_score, "Log": log_score}
     scores = {k: v(yes_probs, no_probs) for k, v in scoring_rules.items()}
-    print("\n".join(f"{k}: {v}" for k, v in scores.items()))
 
-    # Calibration with 100 bins
+    # Calibration at 1%
     one_percent = binary_calibration(yes_probs, no_probs, decimals=2)
-    # plot_calibration(one_percent, bins=np.arange(0, 1+ 1/100, 1/100))
 
-    # Calibration with 10 bins
+    # Calibration at 10%
     ten_percent = binary_calibration(yes_probs, no_probs, decimals=1)
-    # plot_calibration(ten_percent, bins=np.arange(0, 1 + 1/10, 1/10))
 
-    # Calibration when we model each bin as with a beta binomial model
+    # Beta-binomial calibration at 10%
     beta_interval, beta_means = beta_binomial_calibration(
         yes_probs, no_probs, decimals=1
     )
-    plot_beta_binomial(beta_interval, beta_means, decimals=1)
+    return one_percent, ten_percent, beta_interval, beta_means, scores
+
+
+def build_dataframe(
+    markets: List[Market],
+) -> Tuple[pd.DataFrame, List[Tuple[np.ndarray, np.ndarray]]]:
+    """Build a dataframe from all passed markets.
+
+    Args:
+        markets: A list of resolved markets
+
+    Returns:
+        Tuple[pd.DataFrame, Tuple[np.ndarray, np.ndarray]]: The dataframe, and a list of betting histories for every market.
+    """
+    columns = ["id", "num_trades", "resolution", "volume", "tags"]
+    simple_fields = [(x.id, len(x.bets), x.resolution, x.volume, tuple(y.lower() for y in x.tags)) for x in markets]  # type: ignore
+    df = pd.DataFrame(simple_fields, columns=columns)
+
+    histories = [x.probability_history() for x in markets]
+    df["start"] = [p[1][0] for p in histories]
+    df["final"] = [p[1][-1] for p in histories]
+
+    df["num_traders"] = [x.num_traders() for x in markets]
+
+    return df, histories
+
+
+def probability_at_time(
+    histories: List[Tuple[np.ndarray, np.ndarray]], midpoints: np.ndarray
+) -> np.ndarray:
+    indices = [bisect.bisect_left(h[0], m) for h, m in zip(histories, midpoints)]  # type: ignore
+    # Slower, but probably easier to understand
+    probabilities = np.array([h[1][i] for h, i in zip(histories, indices)])
+    return probabilities
+
+
+def markets_by_group(df: pd.DataFrame) -> Dict[str, pd.Series]:
+    """Get a dict group -> group's markets"""
+    all_tags = {y for x in df.tags.unique() for y in x}
+    filters = {x: df.tags.apply(lambda y: x in y) for x in all_tags}
+    return filters
