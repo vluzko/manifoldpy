@@ -209,25 +209,6 @@ class BinaryMarket(Market):
 
     probability: float
 
-    def get_updates(self) -> Tuple[np.ndarray, np.ndarray]:
-        if self.bets is None:
-            full = get_market(self.id)
-            self.bets = full.bets
-            self.comments = full.comments
-
-        assert self.bets is not None
-        if len(self.bets) == 0:
-            return np.array([self.createdTime]), np.array([self.probability])
-        else:
-            start_prob = self.bets[-1].probBefore
-            start_time = self.createdTime
-            times, probabilities = zip(
-                *[(bet.createdTime, bet.probAfter) for bet in self.bets]
-            )
-            return np.array((*times, start_time)), np.array(
-                (*probabilities, start_prob)
-            )
-
     def num_traders(self) -> int:
         if self.bets is None:
             return 0
@@ -244,11 +225,10 @@ class BinaryMarket(Market):
                 [self.probability]
             )
         else:
-            start_prob = self.bets[-1].probBefore
+            s_bets = sorted(self.bets, key=lambda x: x.createdTime)
+            start_prob = s_bets[0].probBefore
             start_time = self.createdTime
-            t_iter, p_iter = zip(
-                *[(bet.createdTime, bet.probAfter) for bet in reversed(self.bets)]
-            )
+            t_iter, p_iter = zip(*[(bet.createdTime, bet.probAfter) for bet in s_bets])
             times, probabilities = np.array((start_time, *t_iter)), np.array(
                 (start_prob, *p_iter)
             )

@@ -65,7 +65,7 @@ def test_get_free_response():
 
 def test_get_market_noisy():
     """Randomly sample k markets and check the data matches no matter how we get it"""
-    k = 25
+    k = 15
     markets = api.get_markets()
     choices = random.sample(range(len(markets)), k)
 
@@ -84,17 +84,17 @@ def test_get_probabilities():
     # Permalink: https://manifold.markets/guzey/will-i-create-at-least-one-more-pre
     market_id = "8Lt9ZTHCPCK58gtn0Y8n"
     market = api.get_market(market_id)
-    times, probs = market.get_updates()
+    times, probs = market.probability_history()
     assert len(times) == len(probs) == 23
-    assert probs[-1] == 0.33
-    assert times[-1] == market.createdTime
+    assert probs[0] == 0.33
+    assert times[0] == market.createdTime
 
-    assert np.isclose(probs[0], 0.56, atol=0.01)
-    assert times[0] == 1652147977243
+    assert np.isclose(probs[-1], 0.56, atol=0.01)
+    assert times[-1] == 1652147977243
 
 
-def test_get_all_markets():
-    markets = api.get_all_markets()
+def test_get_markets():
+    markets = api.get_markets()
     for market in markets:
         assert market.bets is None
         assert market.comments is None
