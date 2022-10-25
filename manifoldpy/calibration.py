@@ -148,7 +148,7 @@ def overall_calibration(
     # Calibration with 11 bins
     ten_percent = binary_calibration(yes_probs, no_probs, decimals=1)
     print(ten_percent)
-    print(np.abs(ten_percent - perfect_calibration(1)))
+    print(ten_percent - perfect_calibration(1))
 
     # Calibration when we model each bin as with a beta binomial model
     beta_interval, beta_means = beta_binomial_calibration(
