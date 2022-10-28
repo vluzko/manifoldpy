@@ -27,8 +27,9 @@ SELL_SHARES_URL = V0_URL + "market/{}/sell"
 
 MarketT = TypeVar("MarketT", bound="Market")
 OutcomeType = Literal[
-    "BINARY", "FREE_RESPONSE", "NUMERIC", "PSEUDO_NUMERIC", "MULTIPLE_CHOICE"
+    "BINARY", "FREE_RESPONSE", "PSEUDO_NUMERIC", "MULTIPLE_CHOICE"
 ]
+Visibility = Literal["public", "unlisted"]
 T = TypeVar("T")
 
 
@@ -491,6 +492,11 @@ class APIWrapper:
         initialProb: Optional[int] = None,
         min: Optional[float] = None,
         max: Optional[float] = None,
+        groupId: Optional[str] = None,
+        visibility: Optional[str] = None,
+        isLogScale: Optional[bool] = None,
+        initialValue: Optional[float] = None,
+        answers: Optional[List[str]] = None,
     ) -> requests.PreparedRequest:
         """Prepare a create market POST request
         See `create_market` for details.
@@ -517,16 +523,31 @@ class APIWrapper:
         if tags is not None:
             data["tags"] = tags
 
+        if groupId is not None:
+            data["groupId"] = groupId
+
+        if visibility is not None:
+            data["visibility"] = visibility
+
         if outcomeType == "BINARY":
             assert initialProb is not None
             assert 1 <= initialProb <= 99
             data["initialProb"] = initialProb
-
-        if outcomeType == "NUMERIC":
+        elif outcomeType == "PSEUDO_NUMERIC":
             assert min is not None
             assert max is not None
             data["min"] = min
             data["max"] = max
+
+            if isLogScale is not None:
+                data["isLogScale"] = isLogScale
+
+            if initialValue is not None:
+                data["initialValue"] = initialValue
+        elif outcomeType == "MULTIPLE_CHOICE":
+            assert answers is not None
+            data["answers"] = answers
+
         req = requests.Request(
             "POST", CREATE_MARKET_URL, headers=self.headers, json=data
         )
@@ -543,19 +564,29 @@ class APIWrapper:
         initialProb: Optional[int] = None,
         min: Optional[float] = None,
         max: Optional[float] = None,
+        groupId: Optional[str] = None,
+        visibility: Optional[Visibility] = None,
+        isLogScale: Optional[bool] = None,
+        initialValue: Optional[float] = None,
+        answers: Optional[List[str]] = None,
     ) -> requests.Response:
         """Create a new market
         [API reference](https://docs.manifold.markets/api#post-v0market)
 
         Args:
-            outcomeType: The kind of market. Must be one of BINARY, FREE_RESPONSE, or NUMERIC
-            question: The market question.
-            description: Additional details about the market
-            closeTime: When the market closes (milliseconds since epoch)
-            tags: Any tags for the market.
-            initialProb: The initial probability for the market. Must be between 1 and 99. Used for BINARY markets.
-            min: Minimum value the market can resolve to. Used for PSEUDONUMERIC markets.
-            max: Maximum value the market can resolve to. Used for PSEUDONUMERIC markets.
+            outcomeType:    The kind of market.
+            question:       Short description of the market.
+            description:    Additional details about the market.
+            closeTime:      When the market closes (milliseconds since epoch).
+            tags:           Any tags for the market.
+            initialProb:    The initial probability for the market. Must be between 1 and 99. Used for BINARY markets.
+            min:            Minimum value the market can resolve to. Used for PSEUDO_NUMERIC markets.
+            max:            Maximum value the market can resolve to. Used for PSEUDO_NUMERIC markets.
+            groupId:        The ID of the group the market belongs to, if any.
+            visibility:     The visibility of the market. Must be 'public' or 'unlisted'
+            isLogScale:     If True, the scale between min and max uses exponential increments. Used for PSEUDO_NUMERIC markets.
+            initialValue:   The initial value of the market. Used for PSEUDO_NUMERIC markets.
+            answers:        The possible answers for the market. Used for MULTIPLE_CHOICE markets.
         """
         prepped = self._prep_create(
             outcomeType,
@@ -566,6 +597,11 @@ class APIWrapper:
             initialProb=initialProb,
             min=min,
             max=max,
+            groupId=groupId,
+            visibility=visibility,
+            isLogScale=isLogScale,
+            initialValue=initialValue,
+            answers=answers
         )
         s = requests.Session()
         return s.send(prepped)
