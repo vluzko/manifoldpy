@@ -20,13 +20,12 @@ def extract_binary_probabilities(
     markets: List[BinaryMarket],
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Get the closing probabilities from all binary markets.
-    Markets that resolve NO have their probabilities flipped
     """
     yes_probs: np.ndarray = np.array(
         [x.probability for x in markets if x.resolution == "YES"]
     )
     no_probs: np.ndarray = np.array(
-        [1 - x.probability for x in markets if x.resolution == "NO"]
+        [x.probability for x in markets if x.resolution == "NO"]
     )
     return yes_probs, no_probs
 
