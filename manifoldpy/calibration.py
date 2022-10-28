@@ -1,10 +1,11 @@
 import bisect
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from manifoldpy.api import Market, BinaryMarket
 from matplotlib import pyplot as plt
 from scipy.stats import beta
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 def perfect_calibration(decimals: int) -> np.ndarray:
@@ -21,8 +22,12 @@ def extract_binary_probabilities(
     """Get the closing probabilities from all binary markets.
     Markets that resolve NO have their probabilities flipped
     """
-    yes_probs = np.array([x.probability for x in markets if x.resolution == "YES"])
-    no_probs = np.array([x.probability for x in markets if x.resolution == "NO"])
+    yes_probs: np.ndarray = np.array(
+        (x.probability for x in markets if x.resolution == "YES")
+    )
+    no_probs: np.ndarray = np.array(
+        (1 - x.probability for x in markets if x.resolution == "NO")
+    )
     return yes_probs, no_probs
 
 
@@ -35,7 +40,7 @@ def brier_score(yes_probs: np.ndarray, no_probs: np.ndarray) -> float:
 
     num_mkts = len(yes_probs) + len(no_probs)
     score = 1 / num_mkts * (np.sum(yes_scores) + np.sum(no_scores))
-    return score
+    return score  # type: ignore
 
 
 def log_score(yes_probs: np.ndarray, no_probs: np.ndarray) -> float:
@@ -118,8 +123,8 @@ def plot_beta_binomial(upper_lower: np.ndarray, means: np.ndarray, decimals):
     num_bins = 10**decimals
     x_axis = np.arange(0, 1 + 1 / num_bins, 1 / num_bins)
     ax.scatter(x_axis, means, color="blue")
-    ax.scatter(x_axis, upper_lower[:, 0], color="black", marker="_")
-    ax.scatter(x_axis, upper_lower[:, 1], color="black", marker="_")
+    ax.scatter(x_axis, upper_lower[:, 0], color="black", marker="_")  # type: ignore
+    ax.scatter(x_axis, upper_lower[:, 1], color="black", marker="_")  # type: ignore
     plt.vlines(x_axis, upper_lower[:, 0], upper_lower[:, 1], color="black")
 
     ax.set_xticks(np.arange(0, 1 + 1 / 10, 1 / 10))
@@ -132,9 +137,11 @@ def plot_beta_binomial(upper_lower: np.ndarray, means: np.ndarray, decimals):
     plt.show()
 
 
-def plot_calibration(c_table: np.ndarray, bins: np.ndarray):
+def plot_calibration(
+    c_table: np.ndarray, bins: np.ndarray, path: Optional[Path] = None
+):
     _, ax = plt.subplots()
-    ax.scatter(bins, c_table)
+    ax.scatter(bins, c_table, label="Market calibration")
     # Perfect calibration line
     l = np.arange(0, bins.max(), 0.0001)
     ax.scatter(l, l, color="green", s=0.01, label="Perfect calibration")
@@ -143,13 +150,15 @@ def plot_calibration(c_table: np.ndarray, bins: np.ndarray):
     ax.set_xlabel("Market probability")
     ax.set_yticks(np.arange(0, 1 + 1 / 10, 1 / 10))
     ax.set_ylabel("Empirical probability")
+    ax.legend()
 
-    plt.show()
+    if path is None:
+        plt.show()
+    else:
+        plt.savefig(path)
 
 
-def market_set_accuracy(
-    yes_probs: np.ndarray, no_probs: np.ndarray
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def market_set_accuracy(yes_probs: np.ndarray, no_probs: np.ndarray) -> Dict[str, Any]:
     """Compute common metrics for a set of markets
 
     Args:
@@ -157,10 +166,10 @@ def market_set_accuracy(
         no_probs: The probabilities of all markets that resolved NO.
 
     Returns:
-        1% calibration, 10% calibration, beta-binomial model means, beta-binomial model 95% CI
+        1% calibration, 10% calibration, beta-binomial model means, beta-binomial model 95% CI, and proper scores.
     """
-    scoring_rules = {"Brier": brier_score, "Log": log_score}
-    scores = {k: v(yes_probs, no_probs) for k, v in scoring_rules.items()}
+    scoring_rules = {"Brier score": brier_score, "Log score": log_score}
+    scores = {name: rule(yes_probs, no_probs) for name, rule in scoring_rules.items()}
 
     # Calibration at 1%
     one_percent = binary_calibration(yes_probs, no_probs, decimals=2)
@@ -172,7 +181,12 @@ def market_set_accuracy(
     beta_interval, beta_means = beta_binomial_calibration(
         yes_probs, no_probs, decimals=1
     )
-    return one_percent, ten_percent, beta_interval, beta_means, scores
+    return {
+        "1% calibration": one_percent,
+        "10% calibration": ten_percent,
+        "beta-binomal": (beta_means, beta_interval),
+        **scores,
+    }
 
 
 def build_dataframe(
