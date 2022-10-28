@@ -105,6 +105,11 @@ def test_get_markets():
         assert market.comments is None
 
 
+def test_get_all_bets():
+    bets = api.get_all_bets('LiquidityBonusBot')
+    assert len(bets) == 1056 # Not going to change because I forgot the password :D
+    
+
 def test_bet_prepared():
     wrapper = api.APIWrapper("no_key")
     prepped = wrapper._prep_bet(10, "1", "YES")

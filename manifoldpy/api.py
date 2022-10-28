@@ -742,6 +742,26 @@ def get_all_markets() -> List[Market]:
         else:
             i = markets[-1].id
     return markets
+    
+
+def get_all_bets(username: str) -> List[Bet]:
+    """Get all bets by a specific user.
+    Unlike get_bets, this will get all available bets, without a limit
+    on the number fetched.
+    Automatically calls the bets endpoint until all data has been read.
+    You must provide at least one of the arguments, otherwise the server
+    will be very sad.
+    """
+    bets = get_bets(limit=1000)
+    i = bets[0].id
+    while True:
+        new_bets = get_bets(limit=1000, before=i, username=username)
+        bets.extend(new_bets)
+        if len(new_bets) < 1000:
+            break
+        else:
+            i = bets[-1].id
+    return bets
 
 
 def get_full_markets(reset_cache: bool = False, cache_every: int = 500) -> List[Market]:
