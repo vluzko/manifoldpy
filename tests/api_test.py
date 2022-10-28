@@ -28,6 +28,11 @@ def test_get_markets():
         assert market.comments is None
 
 
+def test_get_markets_limit():
+    markets = api.get_markets(limit=3)
+    assert len(markets) == 3
+
+
 def test_get_market():
     market = api.get_market("6qEWrk0Af7eWupuSWxQm")
     assert market.bets is not None
