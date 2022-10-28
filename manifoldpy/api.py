@@ -329,7 +329,7 @@ def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]
 
     # If this fails, the code is out of date.
     all_mechanisms = {x["mechanism"] for x in json}
-    assert all_mechanisms == {"cpmm-1", "dpm-2"}
+    assert all_mechanisms <= {"cpmm-1", "dpm-2"}
 
     markets = [
         BinaryMarket.from_json(x)
