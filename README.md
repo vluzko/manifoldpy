@@ -1,5 +1,5 @@
 # manifold-markets-python
-[![CircleCI](https://circleci.com/gh/vluzko/manifold-markets-python.svg?style=shield)](https://circleci.com/gh/vluzko/manifold-markets-python)
+[![CircleCI](https://circleci.com/gh/vluzko/manifoldpy.svg?style=shield)](https://circleci.com/gh/vluzko/manifoldpy)
 [![Documentation Status](https://readthedocs.org/projects/manifold-markets-python/badge/?version=latest)](https://manifold-markets-python.readthedocs.io/en/latest/?badge=latest)
 
 
@@ -8,6 +8,10 @@ Tools for analyzing [Manifold Markets](https://manifold.markets/home) data. Curr
 
 [Full Documentation](https://manifold-markets-python.readthedocs.io/en/latest/).
 
+## Calibration
+This is the most recent calibration graph for Manifold Markets. Markets with less than 4 unique traders are excluded. The calibration is generated from the probability *halfway* between market open and market close.
+
+[![Midmarket calibration](https://github.com/vluzko/manifoldpy/blob/main/docs/midway_calibration.png)](https://github.com/vluzko/manifoldpy/blob/main/docs/midway_calibration.png)
 
 ## Installation
 The package is on PyPI as [`manifoldpy`](https://pypi.org/project/manifoldpy/). It can be installed with:
@@ -47,4 +51,11 @@ amount = 100
 contract_id = "8Lt9ZTHCPCK58gtn0Y8n"
 outcome = "YES"
 wrapper.make_bet(amount, contract_id, outcome)
+```
+
+Get a market's history of probabilities:
+```
+from manifoldpy import api
+market = api.get_market("market_id")
+times, probabilities = market.probability_history()
 ```

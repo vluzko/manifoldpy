@@ -35,7 +35,7 @@ def weak_structure(json: dict, cls: Type[T]) -> T:
     for f in cls.__attrs_attrs__:  # type: ignore
         val = json.get(f.name, f.default)
         fields[f.name] = val
-    return cls(**fields)
+    return cls(**fields)  # type: ignore
 
 
 @define
@@ -220,6 +220,8 @@ class BinaryMarket(Market):
         assert (
             self.bets is not None
         ), "Call get_market before accessing probability history"
+        times: np.ndarray
+        probabilities: np.ndarray
         if len(self.bets) == 0:
             times, probabilities = np.array([self.createdTime]), np.array(
                 [self.probability]
@@ -396,6 +398,9 @@ def get_bets(
 class APIWrapper:
     key: str
 
+    def __init__(self, key: str) -> None:
+        self.key = key
+
     @property
     def headers(self) -> Dict[str, str]:
         return {"Content-Type": "application/json", "Authorization": f"Key {self.key}"}
@@ -495,7 +500,7 @@ class APIWrapper:
         description: str,
         closeTime: int,
         tags: Optional[List[str]] = None,
-        initialProb: Optional[float] = None,
+        initialProb: Optional[int] = None,
         min: Optional[float] = None,
         max: Optional[float] = None,
     ) -> requests.Response:
@@ -508,6 +513,9 @@ class APIWrapper:
             description: Additional details about the market
             closeTime: When the market closes (milliseconds since epoch)
             tags: Any tags for the market.
+            initialProb: The initial probability for the market. Must be between 1 and 99. Used for BINARY markets.
+            min: Minimum value the market can resolve to. Used for PSEUDONUMERIC markets.
+            max: Maximum value the market can resolve to. Used for PSEUDONUMERIC markets.
         """
         prepped = self._prep_create(
             outcomeType,
@@ -708,12 +716,11 @@ def get_full_markets(reset_cache: bool = False, cache_every: int = 500) -> List[
             full_markets = {}
     else:
         full_markets = {}
-        import pdb
-
-        pdb.set_trace()
         pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
+
     lite_markets = get_all_markets()
     print(f"Fetched {len(lite_markets)} markets")
+
     cached_ids = {x["market"].id for x in full_markets.values()}
     lite_ids = {x.id for x in lite_markets}
     missing_markets = lite_ids - cached_ids
