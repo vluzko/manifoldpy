@@ -104,11 +104,21 @@ def test_get_markets():
         assert market.bets is None
         assert market.comments is None
 
-
 def test_get_all_bets():
     bets = api.get_all_bets('LiquidityBonusBot')
     assert len(bets) == 1056 # Not going to change because I forgot the password :D
-    
+
+
+def test_me_prepared():
+    wrapper = api.APIWrapper("no_key")
+    prepped = wrapper._prep_me()
+    assert prepped.headers == {
+        "Content-Type": "application/json",
+        "Authorization": "Key no_key",
+    }
+    assert prepped.body == None
+    assert prepped.url == "https://manifold.markets/api/v0/me"
+
 
 def test_bet_prepared():
     wrapper = api.APIWrapper("no_key")
@@ -119,6 +129,18 @@ def test_bet_prepared():
         "Content-Length": "51",
     }
     assert prepped.body == b'{"amount": 10, "contractId": "1", "outcome": "YES"}'
+
+
+def test_cancel_prepared():
+    wrapper = api.APIWrapper("no_key")
+    prepped = wrapper._prep_cancel("2")
+    assert prepped.headers == {
+        "Content-Type": "application/json",
+        "Authorization": "Key no_key",
+        "Content-Length": "0",
+    }
+    assert prepped.body == None
+    assert prepped.url == "https://manifold.markets/api/v0/bet/cancel/2"
 
 
 def test_create_market_prepared():
