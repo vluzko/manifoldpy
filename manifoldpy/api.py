@@ -18,7 +18,9 @@ SINGLE_MARKET_URL = V0_URL + "market/{}"
 MARKET_SLUG_URL = V0_URL + "slug/{}"
 BETS_URL = V0_URL + "bets"
 
+ME_URL = V0_URL + "me"
 MAKE_BET_URL = V0_URL + "bet"
+CANCEL_BET_URL = V0_URL + "bet/cancel/{}"
 CREATE_MARKET_URL = V0_URL + "market"
 RESOLVE_MARKET_URL = V0_URL + "market/{}/resolve"
 SELL_SHARES_URL = V0_URL + "market/{}/sell"
@@ -400,6 +402,20 @@ class APIWrapper:
     def headers(self) -> Dict[str, str]:
         return {"Content-Type": "application/json", "Authorization": f"Key {self.key}"}
 
+    def _prep_me(self):
+        """Prepare a me GET request.
+        See `me` for details.
+        """
+        req = requests.Request("GET", ME_URL, headers=self.headers)
+        prepped = req.prepare()
+        return prepped
+    
+    def me(self):
+        """Return the authenticated user"""
+        prepped = self._prep_me()
+        s = requests.Session()
+        return s.send(prepped)
+
     def _prep_bet(
         self,
         amount: float,
@@ -433,6 +449,30 @@ class APIWrapper:
             limitProb: A limit probability for the bet. If spending the full amount would push the market past this probability, then only enough to push the market to this probability will be bought. Any additional funds will be left often as a bet that can later be matched by an opposing offer.
         """
         prepped = self._prep_bet(amount, contractId, outcome, limitProb=limitProb)
+        s = requests.Session()
+        return s.send(prepped)
+
+    def _prep_cancel(
+        self,
+        bet_id: str,
+    ) -> requests.PreparedRequest:
+        """Prepare a cancel bet POST request.
+        See `cancel_bet` for details.
+        """
+        req = requests.Request("POST", CANCEL_BET_URL.format(bet_id), headers=self.headers)
+        prepped = req.prepare()
+        return prepped
+
+    def cancel_bet(
+        self,
+        bet_id: str,
+    ) -> requests.Response:
+        """Cancel a bet.
+        [API reference](https://docs.manifold.markets/api#post-v0betcancelid)
+        Args:
+            bet_id: The bet id.
+        """
+        prepped = self._prep_cancel(bet_id)
         s = requests.Session()
         return s.send(prepped)
 
@@ -621,6 +661,11 @@ class APIWrapper:
         return s.send(prepped)
 
 
+def me(key: str):
+    """See `APIWrapper.me`"""
+    wrapper = APIWrapper(key)
+    return wrapper.me()
+
 def make_bet(
     key: str,
     amount: float,
@@ -632,6 +677,13 @@ def make_bet(
     wrapper = APIWrapper(key)
     return wrapper.make_bet(amount, contractId, outcome, limitProb=limitProb)
 
+def cancel_bet(
+    key: str,
+    bet_id: str,
+):
+    """See `APIWrapper.cancel_bet`"""
+    wrapper = APIWrapper(key)
+    return wrapper.cancel_bet(bet_id)
 
 def create_market(
     key: str,
