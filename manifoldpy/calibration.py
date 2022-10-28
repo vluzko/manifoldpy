@@ -23,10 +23,10 @@ def extract_binary_probabilities(
     Markets that resolve NO have their probabilities flipped
     """
     yes_probs: np.ndarray = np.array(
-        (x.probability for x in markets if x.resolution == "YES")
+        [x.probability for x in markets if x.resolution == "YES"]
     )
     no_probs: np.ndarray = np.array(
-        (1 - x.probability for x in markets if x.resolution == "NO")
+        [1 - x.probability for x in markets if x.resolution == "NO"]
     )
     return yes_probs, no_probs
 
