@@ -1,6 +1,7 @@
 """Calibration across all resolved markets.
 Currently only works for binary markets.
 """
+from pathlib import Path
 import numpy as np
 import pickle
 
@@ -14,7 +15,7 @@ def group_calibration_at_close():
     binary = [
         m for m in full_markets if isinstance(m, api.BinaryMarket) and m.isResolved
     ]
-    df, histories = calibration.build_dataframe(binary)
+    df, _histories = calibration.build_dataframe(binary)  # type: ignore
     # Group calibration
     groups = calibration.markets_by_group(df)
     results = {}
@@ -32,7 +33,7 @@ def group_calibration_at_close():
         )
         if yes_count + no_count < 10:
             continue
-        res = calibration.binary_calibration(yes_markets["final"], no_markets["final"])[
+        res = calibration.binary_calibration(yes_markets["final"], no_markets["final"])[  # type: ignore
             -2
         ]
         results[group_name] = res
@@ -46,7 +47,7 @@ def overall_calibration():
     binary = [
         m for m in full_markets if isinstance(m, api.BinaryMarket) and m.isResolved
     ]
-    df, histories = calibration.build_dataframe(binary)
+    df, histories = calibration.build_dataframe(binary)  # type: ignore
     # Probabilities at the halfway point
     starts = np.array([h[0][0] for h in histories])
     ends = np.array([h[0][-1] for h in histories])
@@ -59,18 +60,26 @@ def overall_calibration():
     # Calibration at start
     yes_probs = yes_markets["start"]
     no_probs = no_markets["start"]
-    res = calibration.market_set_accuracy(yes_probs, no_probs)
+    res = calibration.market_set_accuracy(yes_probs, no_probs)  # type: ignore
 
     # Calibration at end
     yes_probs = yes_markets["final"]
     no_probs = no_markets["final"]
-    res = calibration.market_set_accuracy(yes_probs, no_probs)
+    res = calibration.market_set_accuracy(yes_probs, no_probs)  # type: ignore
 
     # Calibration at midpoint
-    yes_probs = yes_markets["midway"]
-    no_probs = no_markets["midway"]
-    res = calibration.market_set_accuracy(yes_probs, no_probs)
+    f_yes = yes_markets[yes_markets["num_traders"] > 3]
+    f_no = no_markets[no_markets["num_traders"] > 3]
+    yes_probs = f_yes["midway"]
+    no_probs = f_no["midway"]
+    res = calibration.market_set_accuracy(yes_probs, no_probs)  # type: ignore
+    midway_10 = res["10% calibration"]
+    calibration.plot_calibration(
+        midway_10,
+        calibration.perfect_calibration(1),
+        Path(__file__).parent.parent / "docs" / "midway_calibration.png",
+    )
 
 
 if __name__ == "__main__":
-    group_calibration_at_close()
+    overall_calibration()
