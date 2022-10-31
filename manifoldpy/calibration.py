@@ -19,8 +19,7 @@ def perfect_calibration(decimals: int) -> np.ndarray:
 def extract_binary_probabilities(
     markets: List[BinaryMarket],
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """Get the closing probabilities from all binary markets.
-    """
+    """Get the closing probabilities from all binary markets."""
     yes_probs: np.ndarray = np.array(
         [x.probability for x in markets if x.resolution == "YES"]
     )
@@ -61,7 +60,7 @@ def relative_log_score(markets: List[Market]) -> float:
 def bet_counts(
     yes_probs: np.ndarray, no_probs: np.ndarray, decimals: int
 ) -> np.ndarray:
-    """Number of bets that have resolved YES/NO within each bins"""
+    """Number of bets that have resolved YES/NO within each bin"""
     yes_idx, yes_counts = np.unique(
         yes_probs.round(decimals=decimals), return_counts=True
     )
