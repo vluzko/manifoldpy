@@ -37,10 +37,24 @@ def main():
         np.array([x not in t[:i] for i, x in enumerate(t)]).cumsum() for t in traders
     ]
     df["new_trader"] = new_trader
+    last = len(df)
     for i in range(1, 100):
         print(f"After {i} traders:")
         sub_df = df[df["num_traders"] > i].copy()
+
+        # Should monotonically decrease
+        assert len(sub_df) <= last
+        last = len(sub_df)
+
         index_of_ith = sub_df["new_trader"].map(lambda x: np.where(x == i)[0][0])
+
+        # Check trade index
+        for df_idx, t_idx in index_of_ith.items():
+            row = df.loc[df_idx]
+            assert row["new_trader"][t_idx] == i
+            if t_idx > 0:
+                assert row["new_trader"][t_idx] == 1 + row["new_trader"][t_idx - 1]
+
         # Grab the probability corresponding to the i-th trader
         sub_df["p_of_ith"] = [
             sub_df["histories"][i][t_idx] for i, t_idx in index_of_ith.items()
