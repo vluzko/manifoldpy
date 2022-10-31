@@ -8,6 +8,19 @@ import pickle
 from manifoldpy import api, calibration, config
 
 
+def double_check(df):
+    """Double check binary calibration against library method"""
+    relevant = df[df["resolution"].isin({"YES", "NO"})]
+    total_counts = relevant["p_of_ith"].round(decimals=1).value_counts().sort_index()
+    yes_counts = (
+        relevant[relevant["resolution"] == "YES"]["p_of_ith"]
+        .round(decimals=1)
+        .value_counts()
+        .sort_index()
+    )
+    return yes_counts / total_counts
+
+
 def main():
     """Evaluate calibration at start, end, midway, and for individual groups"""
     market_cache = pickle.load(config.CACHE_LOC.open("rb"))
@@ -17,7 +30,9 @@ def main():
     ]
     df, histories = calibration.build_dataframe(binary)  # type: ignore
     df["histories"] = [h[1] for h in histories]
-    traders = ([b.userId for b in m.bets] for m in binary)
+    traders = [
+        [b.userId for b in sorted(m.bets, key=lambda b: b.createdTime)] for m in binary
+    ]
     new_trader = [
         np.array([x not in t[:i] for i, x in enumerate(t)]).cumsum() for t in traders
     ]
@@ -37,16 +52,15 @@ def main():
         # Calibration at start
         yes_probs = yes_markets["p_of_ith"]
         no_probs = no_markets["p_of_ith"]
-        # res = calibration.market_set_accuracy(yes_probs, no_probs)["10% calibration"]  # type: ignore
+        dc = double_check(sub_df)
         ten_percent = calibration.binary_calibration(yes_probs, no_probs, decimals=1)
+        assert (dc.array == ten_percent).all()
         perfect = calibration.perfect_calibration(decimals=1)
         diff = np.abs(ten_percent - perfect)
         print("\n".join(f"{i:.3f}: {d:.4f}" for i, d in zip(perfect, diff)))
         total_good = len(np.where(diff <= 0.05)[0])
         print(f"Total in range: {total_good}")
-        import pdb
 
-        pdb.set_trace()
         if total_good >= 7:
             print(f"Stopping at {i}")
             break
