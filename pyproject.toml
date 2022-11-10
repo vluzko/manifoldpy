@@ -25,7 +25,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest==7.1.2"
+    "pytest==7.1.2",
+    "Sphinx==5.3.0",
+    "sphinx_rtd_theme==1.1.1"
 ]
 
 [project.urls]
