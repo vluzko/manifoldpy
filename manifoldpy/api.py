@@ -287,37 +287,44 @@ class MultipleChoiceMarket(Market):
     pass
 
 
-def get_user_by_name(username: str) -> User:
-    """Get the data for one user from their username
-    [API reference](https://docs.manifold.markets/api#get-v0userusername)
+def get_bets(
+    username: Optional[str] = None,
+    market: Optional[str] = None,
+    limit: int = 1000,
+    before: Optional[str] = None,
+) -> List[Bet]:
+    """Get all bets.
+    [API reference](https://docs.manifold.markets/api#get-v0bets)
 
     Args:
-        username:
+        username: The user to get bets for.
+        market: The market to get bets for.
+        limit: Number of bets to return. Maximum 1000.
+        before: ID of a bet to fetch bets before.
     """
-    resp = requests.get(USERNAME_URL.format(username))
+    params: Dict[str, Any] = {"limit": limit}
+    if username is not None:
+        params["username"] = username
+    if market is not None:
+        params["market"] = market
+    if before is not None:
+        params["before"] = before
+    resp = requests.get(BETS_URL, params=params)
     resp.raise_for_status()
-    return weak_structure(resp.json(), User)
+
+    return [weak_structure(x, Bet) for x in resp.json()]
 
 
-def get_user_by_id(user_id: str) -> User:
-    """Get the data for one user from their username
-    [API reference](https://docs.manifold.markets/api#get-v0userby-idid)
+def get_market(market_id: str) -> Market:
+    """Get a single full market.
 
-    Args:
-        user_id:
+    Raises:
+        HTTPError: If the API gives a bad response.
+            This is known to happen with markets with a very large number of bets.
     """
-    resp = requests.get(USER_ID_URL.format(user_id))
+    resp = requests.get(SINGLE_MARKET_URL.format(market_id), timeout=20)
     resp.raise_for_status()
-    return weak_structure(resp.json(), User)
-
-
-def get_users() -> List[User]:
-    """Get all users.
-    [API reference](https://docs.manifold.markets/api#get-v0users)
-    """
-    resp = requests.get(USERS_URL)
-    resp.raise_for_status()
-    return [weak_structure(x, User) for x in resp.json()]
+    return Market.from_json(resp.json())
 
 
 def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]:
@@ -356,44 +363,124 @@ def get_slug(slug: str) -> Market:
     return Market.from_json(market)
 
 
-def get_market(market_id: str) -> Market:
-    """Get a single full market.
+def get_user_by_name(username: str) -> User:
+    """Get the data for one user from their username
+    [API reference](https://docs.manifold.markets/api#get-v0userusername)
 
-    Raises:
-        HTTPError: If the API gives a bad response.
-            This is known to happen with markets with a very large number of bets.
+    Args:
+        username:
     """
-    resp = requests.get(SINGLE_MARKET_URL.format(market_id), timeout=20)
+    resp = requests.get(USERNAME_URL.format(username))
     resp.raise_for_status()
-    return Market.from_json(resp.json())
+    return weak_structure(resp.json(), User)
 
 
-def get_bets(
-    username: Optional[str] = None,
-    market: Optional[str] = None,
-    limit: int = 1000,
-    before: Optional[str] = None,
-) -> List[Bet]:
-    """Get all bets.
-    [API reference](https://docs.manifold.markets/api#get-v0bets)
+def get_user_by_id(user_id: str) -> User:
+    """Get the data for one user from their username
+    [API reference](https://docs.manifold.markets/api#get-v0userby-idid)
+
+    Args:
+        user_id:
+    """
+    resp = requests.get(USER_ID_URL.format(user_id))
+    resp.raise_for_status()
+    return weak_structure(resp.json(), User)
+
+
+def get_users() -> List[User]:
+    """Get all users.
+    [API reference](https://docs.manifold.markets/api#get-v0users)
+    """
+    resp = requests.get(USERS_URL)
+    resp.raise_for_status()
+    return [weak_structure(x, User) for x in resp.json()]
+
+
+def get_all_markets() -> List[Market]:
+    """Get all markets.
+    Unlike get_markets, this will get all available markets, without a limit
+    on the number fetched.
+    Automatically calls the markets endpoint until all data has been read.
+    """
+    markets = get_markets(limit=1000)
+    i = markets[0].id
+    while True:
+        new_markets = get_markets(limit=1000, before=i)
+        markets.extend(new_markets)
+        if len(new_markets) < 1000:
+            break
+        else:
+            i = markets[-1].id
+    return markets
+
+
+def get_all_bets(username: str) -> List[Bet]:
+    """Get all bets by a specific user.
+    Unlike get_bets, this will get all available bets, without a limit
+    on the number fetched.
+    Automatically calls the bets endpoint until all data has been read.
+    You must provide at least one of the arguments, otherwise the server
+    will be very sad.
 
     Args:
         username: The user to get bets for.
-        market: The market to get bets for.
-        limit: Number of bets to return. Maximum 1000.
-        before: ID of a bet to fetch bets before.
     """
-    params: Dict[str, Any] = {"limit": limit}
-    if username is not None:
-        params["username"] = username
-    if market is not None:
-        params["market"] = market
-    if before is not None:
-        params["before"] = before
-    resp = requests.get(BETS_URL, params=params)
-    resp.raise_for_status()
+    bets = get_bets(limit=1000)
+    i = bets[0].id
+    while True:
+        new_bets = get_bets(limit=1000, before=i, username=username)
+        bets.extend(new_bets)
+        if len(new_bets) < 1000:
+            break
+        else:
+            i = bets[-1].id
+    return bets
 
-    return [weak_structure(x, Bet) for x in resp.json()]
+
+def get_full_markets(reset_cache: bool = False, cache_every: int = 500) -> List[Market]:
+    """Get all full markets, and cache the results.
+    Cache is not timestamped.
+
+    Args:
+        reset_cache: Whether or not to overwrite the existing cache
+        cache_every: How frequently to cache the updated markets.
+    """
+
+    if not reset_cache:
+        try:
+            full_markets = pickle.load(config.CACHE_LOC.open("rb"))
+        except FileNotFoundError:
+            full_markets = {}
+    else:
+        full_markets = {}
+        pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
+
+    lite_markets = get_all_markets()
+    print(f"Fetched {len(lite_markets)} markets")
+
+    cached_ids = {x["market"].id for x in full_markets.values()}
+    lite_ids = {x.id for x in lite_markets}
+    missing_markets = lite_ids - cached_ids
+    print(f"Need {len(missing_markets)} new markets.")
+    missed = []
+    for i, lmarket_id in enumerate(missing_markets):
+        try:
+            full_market = get_market(lmarket_id)
+            full_markets[full_market.id] = {
+                "market": full_market,
+                "cache_time": time(),
+            }
+        # If we get an HTTP Error, just skip that market
+        except requests.HTTPError:
+            missed.append(lmarket_id)
+
+        if i % cache_every == 0:
+            print(i)
+            pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
+    pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
+    market_list = [x["market"] for x in full_markets.values()]
+    print(f"Could not get {len(missed)} markets.")
+    return market_list
 
 
 @define
@@ -792,87 +879,3 @@ def resolve_market(
 @use_api
 def sell_shares(key: str, market_id: str, outcome: str, shares: Optional[int] = None):
     """See `APIWrapper.sell_shares`."""
-
-
-def get_all_markets() -> List[Market]:
-    """Get all markets.
-    Unlike get_markets, this will get all available markets, without a limit
-    on the number fetched.
-    Automatically calls the markets endpoint until all data has been read.
-    """
-    markets = get_markets(limit=1000)
-    i = markets[0].id
-    while True:
-        new_markets = get_markets(limit=1000, before=i)
-        markets.extend(new_markets)
-        if len(new_markets) < 1000:
-            break
-        else:
-            i = markets[-1].id
-    return markets
-
-
-def get_all_bets(username: str) -> List[Bet]:
-    """Get all bets by a specific user.
-    Unlike get_bets, this will get all available bets, without a limit
-    on the number fetched.
-    Automatically calls the bets endpoint until all data has been read.
-    You must provide at least one of the arguments, otherwise the server
-    will be very sad.
-    """
-    bets = get_bets(limit=1000)
-    i = bets[0].id
-    while True:
-        new_bets = get_bets(limit=1000, before=i, username=username)
-        bets.extend(new_bets)
-        if len(new_bets) < 1000:
-            break
-        else:
-            i = bets[-1].id
-    return bets
-
-
-def get_full_markets(reset_cache: bool = False, cache_every: int = 500) -> List[Market]:
-    """Get all full markets, and cache the results.
-    Cache is not timestamped.
-
-    Args:
-        reset_cache: Whether or not to overwrite the existing cache
-        cache_every: How frequently to cache the updated markets.
-    """
-
-    if not reset_cache:
-        try:
-            full_markets = pickle.load(config.CACHE_LOC.open("rb"))
-        except FileNotFoundError:
-            full_markets = {}
-    else:
-        full_markets = {}
-        pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
-
-    lite_markets = get_all_markets()
-    print(f"Fetched {len(lite_markets)} markets")
-
-    cached_ids = {x["market"].id for x in full_markets.values()}
-    lite_ids = {x.id for x in lite_markets}
-    missing_markets = lite_ids - cached_ids
-    print(f"Need {len(missing_markets)} new markets.")
-    missed = []
-    for i, lmarket_id in enumerate(missing_markets):
-        try:
-            full_market = get_market(lmarket_id)
-            full_markets[full_market.id] = {
-                "market": full_market,
-                "cache_time": time(),
-            }
-        # If we get an HTTP Error, just skip that market
-        except requests.HTTPError:
-            missed.append(lmarket_id)
-
-        if i % cache_every == 0:
-            print(i)
-            pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
-    pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
-    market_list = [x["market"] for x in full_markets.values()]
-    print(f"Could not get {len(missed)} markets.")
-    return market_list
