@@ -10,6 +10,8 @@ from manifoldpy import config
 
 
 V0_URL = "https://manifold.markets/api/v0/"
+
+# GET URLs
 USERNAME_URL = V0_URL + "user/{}"
 USER_ID_URL = V0_URL + "user/by-id/{}"
 USERS_URL = V0_URL + "users"
@@ -18,16 +20,19 @@ SINGLE_MARKET_URL = V0_URL + "market/{}"
 MARKET_SLUG_URL = V0_URL + "slug/{}"
 BETS_URL = V0_URL + "bets"
 
+# POST URLs
 ME_URL = V0_URL + "me"
 MAKE_BET_URL = V0_URL + "bet"
 CANCEL_BET_URL = V0_URL + "bet/cancel/{}"
 CREATE_MARKET_URL = V0_URL + "market"
+ADD_LIQUIDITY_URL = V0_URL + "market/{}/add-liquidity"
+CLOSE_URL = V0_URL + "market/{}/close"
 RESOLVE_MARKET_URL = V0_URL + "market/{}/resolve"
 SELL_SHARES_URL = V0_URL + "market/{}/sell"
 
 MarketT = TypeVar("MarketT", bound="Market")
 OutcomeType = Literal[
-    "BINARY", "FREE_RESPONSE", "PSEUDO_NUMERIC", "MULTIPLE_CHOICE"
+    "BINARY", "FREE_RESPONSE", "PSEUDO_NUMERIC", "MULTIPLE_CHOICE", "NUMERIC"
 ]
 Visibility = Literal["public", "unlisted"]
 T = TypeVar("T")
@@ -307,7 +312,7 @@ def get_user_by_id(user_id: str) -> User:
 
 
 def get_users() -> List[User]:
-    """Get all users
+    """Get all users.
     [API reference](https://docs.manifold.markets/api#get-v0users)
     """
     resp = requests.get(USERS_URL)
@@ -316,18 +321,17 @@ def get_users() -> List[User]:
 
 
 def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]:
-    """Get a list of markets
+    """Get a list of markets (not including comments or bets).
     [API reference](https://docs.manifold.markets/api#get-v0markets)
 
     Args:
-        limit:
-        before:
+        limit: Number of markets to fetch. Max 1000.
+        before: ID of a market to fetch markets before.
 
     """
+    params: Dict[str, Any] = {"limit": limit}
     if before is not None:
-        params = {"limit": limit, "before": before}
-    else:
-        params = {"limit": limit}
+        params["before"] = before
     json = requests.get(ALL_MARKETS_URL, params=params).json()  # type: ignore
 
     # If this fails, the code is out of date.
@@ -345,19 +349,15 @@ def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]
 
 
 def get_slug(slug: str) -> Market:
-    """Get a market by its slug
+    """Get a market by its slug.
     [API reference](https://docs.manifold.markets/api#get-v0slugmarketslug)
     """
     market = requests.get(MARKET_SLUG_URL.format(slug)).json()
-    if "probability" in market:
-        return BinaryMarket.from_json(market)
-
-    else:
-        return FreeResponseMarket.from_json(market)
+    return Market.from_json(market)
 
 
 def get_market(market_id: str) -> Market:
-    """Get a single full market
+    """Get a single full market.
 
     Raises:
         HTTPError: If the API gives a bad response.
@@ -365,8 +365,7 @@ def get_market(market_id: str) -> Market:
     """
     resp = requests.get(SINGLE_MARKET_URL.format(market_id), timeout=20)
     resp.raise_for_status()
-    market = resp.json()
-    return Market.from_json(market)
+    return Market.from_json(resp.json())
 
 
 def get_bets(
@@ -379,10 +378,10 @@ def get_bets(
     [API reference](https://docs.manifold.markets/api#get-v0bets)
 
     Args:
-        username:
-        market:
-        limit:
-        before:
+        username: The user to get bets for.
+        market: The market to get bets for.
+        limit: Number of bets to return. Maximum 1000.
+        before: ID of a bet to fetch bets before.
     """
     params: Dict[str, Any] = {"limit": limit}
     if username is not None:
@@ -408,21 +407,41 @@ class APIWrapper:
     def headers(self) -> Dict[str, str]:
         return {"Content-Type": "application/json", "Authorization": f"Key {self.key}"}
 
-    def _prep_me(self):
+    def _prep_add_liquidity(
+        self, market_id: str, amount: float
+    ) -> requests.PreparedRequest:
+        req = requests.Request(
+            "POST",
+            ADD_LIQUIDITY_URL.format(market_id),
+            headers=self.headers,
+            json={"amount": amount},
+        )
+        return req.prepare()
+
+    def add_liquidity(self, market_id: str, amount: float) -> requests.Response:
+        """Add liquidity to a market
+
+        Args:
+            market_id:  The market to add liquidity to.
+            amount:     The amount of liquidity to add.
+        """
+        prepped = self._prep_add_liquidity(market_id, amount)
+        return requests.Session().send(prepped)
+
+    def _prep_me(self) -> requests.PreparedRequest:
         """Prepare a me GET request.
         See `me` for details.
         """
         req = requests.Request("GET", ME_URL, headers=self.headers)
         prepped = req.prepare()
         return prepped
-    
-    def me(self):
+
+    def me(self) -> requests.Response:
         """Return the authenticated user"""
         prepped = self._prep_me()
-        s = requests.Session()
-        return s.send(prepped)
+        return requests.Session().send(prepped)
 
-    def _prep_bet(
+    def _prep_make_bet(
         self,
         amount: float,
         contractId: str,
@@ -436,8 +455,7 @@ class APIWrapper:
         if limitProb is not None:
             data["limitProb"] = limitProb
         req = requests.Request("POST", MAKE_BET_URL, headers=self.headers, json=data)
-        prepped = req.prepare()
-        return prepped
+        return req.prepare()
 
     def make_bet(
         self,
@@ -454,18 +472,19 @@ class APIWrapper:
             outcome: The outcome to bet on. YES or NO for binary markets
             limitProb: A limit probability for the bet. If spending the full amount would push the market past this probability, then only enough to push the market to this probability will be bought. Any additional funds will be left often as a bet that can later be matched by an opposing offer.
         """
-        prepped = self._prep_bet(amount, contractId, outcome, limitProb=limitProb)
-        s = requests.Session()
-        return s.send(prepped)
+        prepped = self._prep_make_bet(amount, contractId, outcome, limitProb=limitProb)
+        return requests.Session().send(prepped)
 
-    def _prep_cancel(
+    def _prep_cancel_bet(
         self,
         bet_id: str,
     ) -> requests.PreparedRequest:
         """Prepare a cancel bet POST request.
         See `cancel_bet` for details.
         """
-        req = requests.Request("POST", CANCEL_BET_URL.format(bet_id), headers=self.headers)
+        req = requests.Request(
+            "POST", CANCEL_BET_URL.format(bet_id), headers=self.headers
+        )
         prepped = req.prepare()
         return prepped
 
@@ -478,11 +497,11 @@ class APIWrapper:
         Args:
             bet_id: The bet id.
         """
-        prepped = self._prep_cancel(bet_id)
+        prepped = self._prep_cancel_bet(bet_id)
         s = requests.Session()
         return s.send(prepped)
 
-    def _prep_create(
+    def _prep_create_market(
         self,
         outcomeType: str,
         question: str,
@@ -551,8 +570,7 @@ class APIWrapper:
         req = requests.Request(
             "POST", CREATE_MARKET_URL, headers=self.headers, json=data
         )
-        prepped = req.prepare()
-        return prepped
+        return req.prepare()
 
     def create_market(
         self,
@@ -588,7 +606,7 @@ class APIWrapper:
             initialValue:   The initial value of the market. Used for PSEUDO_NUMERIC markets.
             answers:        The possible answers for the market. Used for MULTIPLE_CHOICE markets.
         """
-        prepped = self._prep_create(
+        prepped = self._prep_create_market(
             outcomeType,
             question,
             description,
@@ -601,10 +619,9 @@ class APIWrapper:
             visibility=visibility,
             isLogScale=isLogScale,
             initialValue=initialValue,
-            answers=answers
+            answers=answers,
         )
-        s = requests.Session()
-        return s.send(prepped)
+        return requests.Session().send(prepped)
 
     def _prep_resolve(
         self,
@@ -637,8 +654,7 @@ class APIWrapper:
             headers=self.headers,
             json=data,
         )
-        prepped = req.prepare()
-        return prepped
+        return req.prepare()
 
     def resolve_market(
         self,
@@ -664,8 +680,7 @@ class APIWrapper:
             resolutions=resolutions,
             value=value,
         )
-        s = requests.Session()
-        return s.send(prepped)
+        return requests.Session().send(prepped)
 
     def _prep_sell(
         self,
@@ -685,8 +700,7 @@ class APIWrapper:
         req = requests.Request(
             "POST", SELL_SHARES_URL.format(market_id), headers=self.headers, json=data
         )
-        prepped = req.prepare()
-        return prepped
+        return req.prepare()
 
     def sell_shares(
         self,
@@ -701,34 +715,33 @@ class APIWrapper:
             outcome: The kind of shares to sell. Must be YES or NO.
         """
         prepped = self._prep_sell(market_id, outcome, shares=shares)
-        s = requests.Session()
-        return s.send(prepped)
+        return requests.Session().send(prepped)
 
 
-def me(key: str):
-    """See `APIWrapper.me`"""
-    wrapper = APIWrapper(key)
-    return wrapper.me()
+def use_api(f):
+    """Automatically create an API Wrapper and use it"""
 
-def make_bet(
-    key: str,
-    amount: float,
-    contractId: str,
-    outcome: str,
-    limitProb: Optional[float] = None,
-):
-    """See `APIWrapper.make_bet`"""
-    wrapper = APIWrapper(key)
-    return wrapper.make_bet(amount, contractId, outcome, limitProb=limitProb)
+    def wrapped(key: str, *args, **kwargs):
+        wrapper = APIWrapper(key)
+        return getattr(wrapper, f.__name__)(*args, **kwargs)
 
+    return wrapped
+
+
+@use_api
+def add_liquidity(key: str, market_id: str, amount: float):
+    """See `APIWrapper.add_liquidity`."""
+
+
+@use_api
 def cancel_bet(
     key: str,
     bet_id: str,
 ):
-    """See `APIWrapper.cancel_bet`"""
-    wrapper = APIWrapper(key)
-    return wrapper.cancel_bet(bet_id)
+    """See `APIWrapper.cancel_bet`."""
 
+
+@use_api
 def create_market(
     key: str,
     outcomeType: OutcomeType,
@@ -736,15 +749,35 @@ def create_market(
     description: str,
     closeTime: int,
     tags: Optional[List[str]] = None,
-    initialProb: Optional[float] = None,
+    initialProb: Optional[int] = None,
     min: Optional[float] = None,
     max: Optional[float] = None,
+    groupId: Optional[str] = None,
+    visibility: Optional[Visibility] = None,
+    isLogScale: Optional[bool] = None,
+    initialValue: Optional[float] = None,
+    answers: Optional[List[str]] = None,
 ):
-    """See `APIWrapper.create_market`"""
-    wrapper = APIWrapper(key)
-    return wrapper.create_market(outcomeType, question, description, closeTime, tags)
+    """See `APIWrapper.create_market`."""
 
 
+@use_api
+def make_bet(
+    key: str,
+    amount: float,
+    contractId: str,
+    outcome: str,
+    limitProb: Optional[float] = None,
+):
+    """See `APIWrapper.make_bet`."""
+
+
+@use_api
+def me(key: str):
+    """See `APIWrapper.me`."""
+
+
+@use_api
 def resolve_market(
     key: str,
     market_id: str,
@@ -753,21 +786,12 @@ def resolve_market(
     resolutions: Optional[List[Any]] = None,
     value: Optional[Any] = None,
 ):
-    """See `APIWrapper.resolve_market`"""
-    wrapper = APIWrapper(key)
-    return wrapper.resolve_market(
-        market_id,
-        outcome,
-        probabilityInt=probabilityInt,
-        resolutions=resolutions,
-        value=value,
-    )
+    """See `APIWrapper.resolve_market`."""
 
 
+@use_api
 def sell_shares(key: str, market_id: str, outcome: str, shares: Optional[int] = None):
-    """See `APIWrapper.sell_shares`"""
-    wrapper = APIWrapper(key)
-    return wrapper.sell_shares(market_id, outcome, shares=shares)
+    """See `APIWrapper.sell_shares`."""
 
 
 def get_all_markets() -> List[Market]:
@@ -786,7 +810,7 @@ def get_all_markets() -> List[Market]:
         else:
             i = markets[-1].id
     return markets
-    
+
 
 def get_all_bets(username: str) -> List[Bet]:
     """Get all bets by a specific user.
