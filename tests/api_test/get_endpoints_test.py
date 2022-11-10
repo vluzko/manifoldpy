@@ -16,6 +16,18 @@ def test_get_groups():
     assert len(groups) >= 480
 
 
+def test_get_group_by_slug():
+    slug = "uk-policies-by-the-next-election"
+    group = api.get_group_by_slug(slug)
+    assert group.id == "023SKlBd1yv7btKfwjHy"
+
+
+def test_get_group_by_id():
+    group = api.get_group_by_id("023SKlBd1yv7btKfwjHy")
+    assert group.name == "UK policies by the next election"
+    assert group.slug == "uk-policies-by-the-next-election"
+
+
 def test_get_markets():
     markets = api.get_markets(limit=100)
     for market in markets:

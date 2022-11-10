@@ -110,19 +110,19 @@ class Group:
     """
 
     mostRecentActivityTime: int
-    aboutPostId: Any
-    creatorId: Any
-    mostRecentContractAddedTime: Any
-    anyoneCanJoin: Any
-    name: Any
-    totalMembers: Any
-    createdTime: Any
-    about: Any
-    slug: Any
-    id: Any
+    aboutPostId: str
+    creatorId: str
+    mostRecentContractAddedTime: int
+    anyoneCanJoin: bool
+    name: str
+    totalMembers: int
+    createdTime: int
+    about: str
+    slug: str
+    id: str
     totalContracts: Any
-    cachedLeaderboard: Any
-    pinnedItems: Any
+    cachedLeaderboard: Dict[str, Any]
+    pinnedItems: List[Any]
 
 
 @define
@@ -343,9 +343,24 @@ def get_bets(
 
 
 def get_groups() -> List[Group]:
+    """Get a list of all groups."""
     resp = requests.get(GROUPS_URL, timeout=20)
     resp.raise_for_status()
     return [weak_structure(x, Group) for x in resp.json()]
+
+
+def get_group_by_slug(slug: str) -> Group:
+    """Get a group by its slug."""
+    resp = requests.get(GROUP_SLUG_URL.format(group_slug=slug), timeout=20)
+    resp.raise_for_status()
+    return weak_structure(resp.json(), Group)
+
+
+def get_group_by_id(group_id: str) -> Group:
+    """Get a group by its ID."""
+    resp = requests.get(GROUP_ID_URL.format(group_id=group_id), timeout=20)
+    resp.raise_for_status()
+    return weak_structure(resp.json(), Group)
 
 
 def get_market(market_id: str) -> Market:
