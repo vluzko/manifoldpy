@@ -608,6 +608,7 @@ class APIWrapper:
     ) -> requests.Response:
         """Make a bet.
         [API reference](https://docs.manifold.markets/api#post-v0bet)
+
         Args:
             amount: The amount to bet
             contractId: The market id.
@@ -636,6 +637,7 @@ class APIWrapper:
     ) -> requests.Response:
         """Cancel a bet.
         [API reference](https://docs.manifold.markets/api#post-v0betcancelid)
+
         Args:
             bet_id: The bet id.
         """
@@ -808,6 +810,7 @@ class APIWrapper:
     ) -> requests.Response:
         """Resolve an existing market.
         [API reference](https://docs.manifold.markets/api#post-v0marketmarketidresolve)
+
         Args:
             market_id: The id of the market to resolve.
             outcome: The outcome to resolve with.

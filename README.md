@@ -59,3 +59,23 @@ from manifoldpy import api
 market = api.get_market("market_id")
 times, probabilities = market.probability_history()
 ```
+
+Generate a basic calibration graph:
+```
+from manifoldpy import api, calibration
+full_markets = api.get_full_markets()
+binary = [
+    m for m in full_markets if isinstance(m, api.BinaryMarket) and m.isResolved
+]
+df, histories = calibration.build_dataframe(binary)
+
+yes_markets = df[df["resolution"] == "YES"]
+no_markets = df[df["resolution"] == "NO"]
+
+# Calibration at start
+yes_probs = yes_markets["start"]
+no_probs = no_markets["start"]
+calibration = calibration.market_set_accuracy(yes_probs, no_probs)
+```
+
+There are additional examples for analyzing market calibration in the `scripts/` directory.
