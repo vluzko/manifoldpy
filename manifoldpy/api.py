@@ -19,6 +19,7 @@ GROUPS_URL = V0_URL + "groups"
 GROUP_SLUG_URL = V0_URL + "group/{group_slug}"
 GROUP_ID_URL = V0_URL + "group/by-id/{group_id}"
 GROUP_MARKETS_URL = V0_URL + "group/by-id/{group_id}/markets"
+ME_URL = V0_URL + "me"
 MARKET_SLUG_URL = V0_URL + "slug/{}"
 SINGLE_MARKET_URL = V0_URL + "market/{}"
 USERNAME_URL = V0_URL + "user/{}"
@@ -26,7 +27,6 @@ USER_ID_URL = V0_URL + "user/by-id/{}"
 USERS_URL = V0_URL + "users"
 
 # POST URLs
-ME_URL = V0_URL + "me"
 MAKE_BET_URL = V0_URL + "bet"
 CANCEL_BET_URL = V0_URL + "bet/cancel/{}"
 CREATE_MARKET_URL = V0_URL + "market"
@@ -494,7 +494,6 @@ def get_all_bets(username: str) -> List[Bet]:
 
 def get_full_markets(reset_cache: bool = False, cache_every: int = 500) -> List[Market]:
     """Get all full markets, and cache the results.
-    Cache is not timestamped.
 
     Args:
         reset_cache: Whether or not to overwrite the existing cache
@@ -511,12 +510,12 @@ def get_full_markets(reset_cache: bool = False, cache_every: int = 500) -> List[
         pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
 
     lite_markets = get_all_markets()
-    print(f"Fetched {len(lite_markets)} markets")
+    print(f"Found {len(lite_markets)} lite markets")
 
     cached_ids = {x["market"].id for x in full_markets.values()}
     lite_ids = {x.id for x in lite_markets}
     missing_markets = lite_ids - cached_ids
-    print(f"Need {len(missing_markets)} new markets.")
+    print(f"Need to fetch {len(missing_markets)} new markets.")
     missed = []
     for i, lmarket_id in enumerate(missing_markets):
         try:
@@ -530,11 +529,12 @@ def get_full_markets(reset_cache: bool = False, cache_every: int = 500) -> List[
             missed.append(lmarket_id)
 
         if i % cache_every == 0:
-            print(i)
+            print(f"Fetched {i} markets, {len(missing_markets) - i} remaining")
             pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
     pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
     market_list = [x["market"] for x in full_markets.values()]
-    print(f"Could not get {len(missed)} markets.")
+    missed_ids = "\n".join(missed)
+    print(f"Could not get {len(missed)} markets. Missing markets:\n {missed_ids}")
     return market_list
 
 
