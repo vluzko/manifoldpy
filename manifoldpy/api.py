@@ -12,13 +12,18 @@ from manifoldpy import config
 V0_URL = "https://manifold.markets/api/v0/"
 
 # GET URLs
+
+ALL_MARKETS_URL = V0_URL + "markets"
+BETS_URL = V0_URL + "bets"
+GROUPS_URL = V0_URL + "groups"
+GROUP_SLUG_URL = V0_URL + "group/{group_slug}"
+GROUP_ID_URL = V0_URL + "group/by-id/{group_id}"
+GROUP_MARKETS = V0_URL + "group/by-id/{group_id}/markets"
+MARKET_SLUG_URL = V0_URL + "slug/{}"
+SINGLE_MARKET_URL = V0_URL + "market/{}"
 USERNAME_URL = V0_URL + "user/{}"
 USER_ID_URL = V0_URL + "user/by-id/{}"
 USERS_URL = V0_URL + "users"
-ALL_MARKETS_URL = V0_URL + "markets"
-SINGLE_MARKET_URL = V0_URL + "market/{}"
-MARKET_SLUG_URL = V0_URL + "slug/{}"
-BETS_URL = V0_URL + "bets"
 
 # POST URLs
 ME_URL = V0_URL + "me"
@@ -47,24 +52,8 @@ def weak_structure(json: dict, cls: Type[T]) -> T:
 
 
 @define
-class User:
-    """A manifold user"""
-
-    id: str
-    createdTime: int
-    name: str
-    username: str
-    url: str
-    avatarUrl: str
-    balance: float
-    totalDeposits: float
-    profitCached: Dict[str, Optional[float]]
-    creatorVolumeCached: Dict[str, float]
-    bio: Optional[str] = None
-    twitterHandle: Optional[str] = None
-    discordHandle: Optional[str] = None
-    bannerUrl: Optional[str] = None
-    website: Optional[str] = None
+class Answer:
+    """An answer to a free response market"""
 
 
 @define
@@ -115,8 +104,46 @@ class Comment:
 
 
 @define
-class Answer:
-    """An answer to a free response market"""
+class Group:
+    """ "A Manifold group
+    Note that tags count as groups.
+    """
+
+    mostRecentActivityTime: int
+    aboutPostId: Any
+    creatorId: Any
+    mostRecentContractAddedTime: Any
+    anyoneCanJoin: Any
+    name: Any
+    totalMembers: Any
+    createdTime: Any
+    about: Any
+    slug: Any
+    id: Any
+    totalContracts: Any
+    cachedLeaderboard: Any
+    pinnedItems: Any
+
+
+@define
+class User:
+    """A manifold user"""
+
+    id: str
+    createdTime: int
+    name: str
+    username: str
+    url: str
+    avatarUrl: str
+    balance: float
+    totalDeposits: float
+    profitCached: Dict[str, Optional[float]]
+    creatorVolumeCached: Dict[str, float]
+    bio: Optional[str] = None
+    twitterHandle: Optional[str] = None
+    discordHandle: Optional[str] = None
+    bannerUrl: Optional[str] = None
+    website: Optional[str] = None
 
 
 @define
@@ -313,6 +340,12 @@ def get_bets(
     resp.raise_for_status()
 
     return [weak_structure(x, Bet) for x in resp.json()]
+
+
+def get_groups() -> List[Group]:
+    resp = requests.get(GROUPS_URL, timeout=20)
+    resp.raise_for_status()
+    return [weak_structure(x, Group) for x in resp.json()]
 
 
 def get_market(market_id: str) -> Market:

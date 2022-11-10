@@ -6,20 +6,14 @@ from requests import HTTPError
 from manifoldpy import api
 
 
-def test_get_user_by_name():
-    user = api.get_user_by_name("vluzko")
-    assert user.username == "vluzko"
-    assert user.id == "acvO0NAsghTTgGjnsdwt94O44OT2"
+def test_get_bets():
+    bets = api.get_bets()
+    # raise NotImplementedError
 
 
-def test_get_user_by_id():
-    user = api.get_user_by_id("acvO0NAsghTTgGjnsdwt94O44OT2")
-    assert user.username == "vluzko"
-    assert user.id == "acvO0NAsghTTgGjnsdwt94O44OT2"
-
-
-def test_get_users():
-    api.get_users()
+def test_get_groups():
+    groups = api.get_groups()
+    assert len(groups) >= 480
 
 
 def test_get_markets():
@@ -40,26 +34,13 @@ def test_get_market():
     assert market.comments is not None
 
 
-def test_by_slug():
-    market = api.get_slug("will-any-model-pass-an-undergrad-pr")
-    assert market.createdTime == 1657570778443
-    assert (
-        market.question
-        == 'Will any model pass an "undergrad proofs exam" Turing test by 2027?'
-    )
-
-
-def test_get_bets():
-    api.get_bets()
-
-
-def test_broken():
+def test_market_broken():
     # If this stops breaking, the API has been updated
     with pytest.raises(HTTPError):
-        market = api.get_market("YVDsNCQWr7hUrAiFiKIV")
+        api.get_market("YVDsNCQWr7hUrAiFiKIV")
 
 
-def test_get_free_response():
+def test_get_free_response_market():
     market = api.get_market("kbCU0NTSe22jMWWwD4i5")
     assert (
         market.question
@@ -83,6 +64,31 @@ def test_get_market_noisy():
         full_market_slug = api.get_slug(lite_market.slug)
         assert full_market_id == full_market_slug
         assert full_market_id.question == lite_market.question
+
+
+def test_by_slug():
+    market = api.get_slug("will-any-model-pass-an-undergrad-pr")
+    assert market.createdTime == 1657570778443
+    assert (
+        market.question
+        == 'Will any model pass an "undergrad proofs exam" Turing test by 2027?'
+    )
+
+
+def test_get_user_by_name():
+    user = api.get_user_by_name("vluzko")
+    assert user.username == "vluzko"
+    assert user.id == "acvO0NAsghTTgGjnsdwt94O44OT2"
+
+
+def test_get_user_by_id():
+    user = api.get_user_by_id("acvO0NAsghTTgGjnsdwt94O44OT2")
+    assert user.username == "vluzko"
+    assert user.id == "acvO0NAsghTTgGjnsdwt94O44OT2"
+
+
+def test_get_users():
+    api.get_users()
 
 
 def test_get_probabilities():
