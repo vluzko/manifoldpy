@@ -18,7 +18,7 @@ BETS_URL = V0_URL + "bets"
 GROUPS_URL = V0_URL + "groups"
 GROUP_SLUG_URL = V0_URL + "group/{group_slug}"
 GROUP_ID_URL = V0_URL + "group/by-id/{group_id}"
-GROUP_MARKETS = V0_URL + "group/by-id/{group_id}/markets"
+GROUP_MARKETS_URL = V0_URL + "group/by-id/{group_id}/markets"
 MARKET_SLUG_URL = V0_URL + "slug/{}"
 SINGLE_MARKET_URL = V0_URL + "market/{}"
 USERNAME_URL = V0_URL + "user/{}"
@@ -361,6 +361,13 @@ def get_group_by_id(group_id: str) -> Group:
     resp = requests.get(GROUP_ID_URL.format(group_id=group_id), timeout=20)
     resp.raise_for_status()
     return weak_structure(resp.json(), Group)
+
+
+def get_group_markets(group_id: str) -> List[Market]:
+    """Get all markets attached to a group."""
+    resp = requests.get(GROUP_MARKETS_URL.format(group_id=group_id), timeout=20)
+    resp.raise_for_status()
+    return [weak_structure(x, Market) for x in resp.json()]
 
 
 def get_market(market_id: str) -> Market:
