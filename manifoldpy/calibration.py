@@ -1,7 +1,8 @@
+"""Tools for calculating calibration and other accuracy metrics."""
 import bisect
-from pathlib import Path
 import numpy as np
 import pandas as pd
+from pathlib import Path
 from manifoldpy.api import Market, BinaryMarket
 from matplotlib import pyplot as plt
 from scipy.stats import beta

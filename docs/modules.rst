@@ -4,11 +4,6 @@ Submodules
 .. toctree::
    :maxdepth: 4
 
-..    manifoldpy
-
-.. manifoldpy package
-.. ==================
-
 
 manifoldpy.api module
 ---------------------
