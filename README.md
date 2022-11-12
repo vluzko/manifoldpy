@@ -1,4 +1,4 @@
-# manifold-markets-python
+# manifoldpy
 [![CircleCI](https://circleci.com/gh/vluzko/manifoldpy.svg?style=shield)](https://circleci.com/gh/vluzko/manifoldpy)
 [![Documentation Status](https://readthedocs.org/projects/manifold-markets-python/badge/?version=latest)](https://manifold-markets-python.readthedocs.io/en/latest/?badge=latest)
 
