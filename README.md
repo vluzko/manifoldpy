@@ -1,6 +1,7 @@
 # manifoldpy
 [![CircleCI](https://circleci.com/gh/vluzko/manifoldpy.svg?style=shield)](https://circleci.com/gh/vluzko/manifoldpy)
 [![Documentation Status](https://readthedocs.org/projects/manifold-markets-python/badge/?version=latest)](https://manifold-markets-python.readthedocs.io/en/latest/?badge=latest)
+[![PyPI version](https://badge.fury.io/py/manifoldpy.svg)](https://badge.fury.io/py/manifoldpy)
 
 
 Tools for analyzing [Manifold Markets](https://manifold.markets/home) data. Currently has bindings for their API, and code for computing various accuracy metrics (Brier score, log score, calibration).\
