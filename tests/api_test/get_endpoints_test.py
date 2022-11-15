@@ -71,8 +71,9 @@ def test_get_free_response_market():
 
 def test_get_market_noisy():
     """Randomly sample k markets and check the data matches no matter how we get it"""
-    k = 15
-    markets = api.get_markets()
+    k = 5
+    markets = [m for m in api.get_markets(limit=100) if m.isResolved]
+
     choices = random.sample(range(len(markets)), k)
 
     for i in choices:
@@ -80,7 +81,6 @@ def test_get_market_noisy():
         full_market_id = api.get_market(lite_market.id)
         full_market_slug = api.get_slug(lite_market.slug)
         assert full_market_id == full_market_slug
-        assert full_market_id.question == lite_market.question
 
 
 def test_by_slug():

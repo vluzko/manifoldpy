@@ -25,9 +25,14 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "mypy==0.991",
     "pytest==7.1.2",
+    "pandas-stubs==1.5.1.221024",
     "Sphinx==5.3.0",
-    "sphinx_rtd_theme==1.1.1"
+    "sphinx_rtd_theme==1.1.1",
+    "types-pytz==2022.6.0.1",
+    "types-requests==2.28.11.4",
+    "types-urllib3==1.26.25.3"
 ]
 
 [project.urls]
