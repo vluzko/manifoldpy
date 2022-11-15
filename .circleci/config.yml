@@ -3,23 +3,76 @@
 version: 2.1
 orbs:
   python: circleci/python@2.0.3
-# Define a job to be invoked later in a workflow.
-# See: https://circleci.com/docs/2.0/configuration-reference/#jobs
+commands:
+  run_tests:
+    steps:
+        - checkout
+        - run:
+            name: Install
+            command: pip install .[dev]
+        - run:
+            name: Run tests
+            command: pytest tests/
+# jobs:
+#   build_and_test:
+#     executor: python/default
+#     steps:
+#       - checkout
+#       - run:
+#           name: Install
+#           command: pip install .[dev]
+#       - run:
+#           name: Run tests
+#           command: python -m pytest
+
+# workflows:
+#   build_and_test-workflow:
+#     jobs:
+#       - build_and_test
+
 jobs:
   build_and_test:
-    executor: python/default
+    docker:
+      - image: circleci/python:3.10
     steps:
       - checkout
       - run:
           name: Install
-          command: pip install .[dev]
+          command: |
+            pip install .[dev]
+            echo $HOME
+      - run:
+          name: Type checking
+          command: mypy aukpy/
       - run:
           name: Run tests
-          command: python -m pytest
+          command: |
+            pip install coverage
+            coverage run -m pytest
+            coverage report
+            coverage html  # open htmlcov/index.html in a browser
+      - store_artifacts:
+          path: htmlcov
+      - run:
+          name: Upload coverage
+          command: |
+            curl -Os https://uploader.codecov.io/latest/linux/codecov
+            chmod +x codecov
+            ./codecov
+  test-3-9:
+    docker:
+      - image: circleci/python:3.9
+    steps:
+      - run_tests
+  test-3-8:
+    docker:
+      - image: circleci/python:3.8
+    steps:
+      - run_tests
 
-# Invoke jobs via workflows
-# See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
   build_and_test-workflow:
     jobs:
       - build_and_test
+      - test-3-9
+      - test-3-8
