@@ -72,7 +72,7 @@ def test_get_free_response_market():
 def test_get_market_noisy():
     """Randomly sample k markets and check the data matches no matter how we get it"""
     k = 15
-    markets = api.get_markets()
+    markets = api.get_markets(limit=100)
     choices = random.sample(range(len(markets)), k)
 
     for i in choices:
