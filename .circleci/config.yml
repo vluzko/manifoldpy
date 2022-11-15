@@ -31,7 +31,7 @@ commands:
 #       - build_and_test
 
 jobs:
-  build_and_test:
+  test-3-10:
     docker:
       - image: circleci/python:3.10
     steps:
@@ -43,14 +43,14 @@ jobs:
             echo $HOME
       - run:
           name: Type checking
-          command: mypy aukpy/
+          command: mypy manifoldpy/
       - run:
           name: Run tests
           command: |
             pip install coverage
             coverage run -m pytest
             coverage report
-            coverage html  # open htmlcov/index.html in a browser
+            coverage html
       - store_artifacts:
           path: htmlcov
       - run:
@@ -73,6 +73,6 @@ jobs:
 workflows:
   build_and_test-workflow:
     jobs:
-      - build_and_test
+      - test-3-10
       - test-3-9
       - test-3-8
