@@ -96,9 +96,6 @@ def test_get_pseudo_numeric_market():
 def test_get_multiple_choice_market():
     market = api.get_market("TFMgBCrTM5RLZUd95zRW")
     assert isinstance(market, api.MultipleChoiceMarket)
-    import pdb
-
-    pdb.set_trace()
 
 
 def test_get_market_noisy():
