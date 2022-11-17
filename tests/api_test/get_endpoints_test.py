@@ -72,6 +72,8 @@ def test_get_free_response_market():
 def test_get_market_noisy():
     """Randomly sample k markets and check the data matches no matter how we get it"""
     k = 5
+    # We filter for resolved markets because if they're not resolved then
+    # the market can update in between the two API calls
     markets = [m for m in api.get_markets(limit=100) if m.isResolved]
 
     choices = random.sample(range(len(markets)), k)
@@ -105,7 +107,15 @@ def test_get_user_by_id():
 
 
 def test_get_users():
-    api.get_users()
+    users = api.get_users(limit=100)
+    assert len(users) == 100
+
+
+def test_get_all_users():
+    result = api.get_all_users()
+    import pdb
+
+    pdb.set_trace()
 
 
 def test_get_probabilities():

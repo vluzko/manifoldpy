@@ -410,6 +410,24 @@ def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]
     return markets
 
 
+def get_all_markets() -> List[Market]:
+    """Get all markets.
+    Unlike get_markets, this will get all available markets, without a limit
+    on the number fetched.
+    Automatically calls the markets endpoint until all data has been read.
+    """
+    markets = get_markets(limit=1000)
+    i = markets[0].id
+    while True:
+        new_markets = get_markets(limit=1000, before=i)
+        markets.extend(new_markets)
+        if len(new_markets) < 1000:
+            break
+        else:
+            i = markets[-1].id
+    return markets
+
+
 def get_slug(slug: str) -> Market:
     """Get a market by its slug.
     [API reference](https://docs.manifold.markets/api#get-v0slugmarketslug)
@@ -442,31 +460,42 @@ def get_user_by_id(user_id: str) -> User:
     return weak_structure(resp.json(), User)
 
 
-def get_users() -> List[User]:
-    """Get all users.
+def get_users(limit: int = 1000, before: Optional[str] = None) -> List[User]:
+    """Get users up to a limit.
     [API reference](https://docs.manifold.markets/api#get-v0users)
+
+    Args:
+        limit: The maximum number of users to get.
+        before: The ID of a user to get users before.
+
+    Returns:
+        A list of users.
     """
-    resp = requests.get(USERS_URL)
+    params: Dict[str, Any] = {"limit": limit}
+    if before is not None:
+        params["before"] = before
+    resp = requests.get(USERS_URL, params=params)  # type: ignore
     resp.raise_for_status()
     return [weak_structure(x, User) for x in resp.json()]
 
 
-def get_all_markets() -> List[Market]:
-    """Get all markets.
-    Unlike get_markets, this will get all available markets, without a limit
-    on the number fetched.
-    Automatically calls the markets endpoint until all data has been read.
+def get_all_users() -> List[User]:
+    """Get a list of all users.
+    Repeatedly calls the users endpoint until no new users are returned.
+
+    Returns:
+        A list of all users.
     """
-    markets = get_markets(limit=1000)
-    i = markets[0].id
+    users = get_users(limit=1000)
+    i = users[0].id
     while True:
-        new_markets = get_markets(limit=1000, before=i)
-        markets.extend(new_markets)
-        if len(new_markets) < 1000:
+        new_users = get_users(limit=1000, before=i)
+        users.extend(new_users)
+        if len(new_users) < 1000:
             break
         else:
-            i = markets[-1].id
-    return markets
+            i = users[-1].id
+    return users
 
 
 def get_all_bets(username: str) -> List[Bet]:
