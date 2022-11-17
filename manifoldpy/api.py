@@ -320,7 +320,7 @@ def get_bets(
     username: Optional[str] = None,
     marketId: Optional[str] = None,
     marketSlug: Optional[str] = None,
-    limit: int = 1000,
+    limit: Optional[int] = 1000,
     before: Optional[str] = None,
 ) -> List[Bet]:
     """Get bets, optionally associated with a user or market.
@@ -341,9 +341,11 @@ def get_bets(
     if username is not None:
         params["username"] = username
     if marketId is not None:
-        params["marketId"] = marketId
+        params["contractId"] = marketId
     if marketSlug is not None:
-        params["marketSlug"] = marketSlug
+        params["contractSlug"] = marketSlug
+    if limit is not None:
+        params["limit"] = limit
     if before is not None:
         params["before"] = before
     resp = requests.get(BETS_URL, params=params)
@@ -425,7 +427,7 @@ def get_full_market(market_id: str) -> Market:
     resp = requests.get(SINGLE_MARKET_URL.format(market_id), timeout=20)
     resp.raise_for_status()
     market = Market.from_json(resp.json())
-    market.bets = get_bets(marketId=market_id)
+    market.bets = get_bets(marketId=market_id, limit=None)
     market.comments = get_comments(marketId=market_id)
     return market
 
@@ -444,16 +446,14 @@ def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]
         params["before"] = before
     json = requests.get(ALL_MARKETS_URL, params=params).json()  # type: ignore
 
-    # If this fails, the code is out of date.
-    all_mechanisms = {x["mechanism"] for x in json}
-    assert all_mechanisms <= {"cpmm-1", "dpm-2"}
+    outcome_map = {
+        "BINARY": BinaryMarket,
+        "FREE_RESPONSE": FreeResponseMarket,
+        "PSEUDO_NUMERIC": PseudoNumericMarket,
+        "MULTIPLE_CHOICE": MultipleChoiceMarket,
+    }
 
-    markets = [
-        BinaryMarket.from_json(x)
-        if "probability" in x
-        else weak_structure(x, FreeResponseMarket)
-        for x in json
-    ]
+    markets = [weak_structure(x, outcome_map[x["outcomeType"]]) for x in json]
 
     return markets
 

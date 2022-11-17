@@ -39,7 +39,7 @@ def test_get_group_markets():
 
 
 def test_get_markets():
-    markets = api.get_markets(limit=100)
+    markets = api.get_markets()
     for market in markets:
         assert market.bets is None
         assert market.comments is None
@@ -69,6 +69,11 @@ def test_market_broken():
         api.get_market("YVDsNCQWr7hUrAiFiKIV")
 
 
+def test_get_binary_market():
+    market = api.get_market("L4IuKRctNWewm6CjJGx4")
+    assert isinstance(market, api.BinaryMarket)
+
+
 def test_get_free_response_market():
     market = api.get_market("kbCU0NTSe22jMWWwD4i5")
     assert (
@@ -79,6 +84,21 @@ def test_get_free_response_market():
     assert isinstance(market, api.FreeResponseMarket)
     assert market.answers is not None
     assert len(market.answers) >= 5
+
+
+def test_get_pseudo_numeric_market():
+    market = api.get_market("z5Azjkk0pDw1C905REGd")
+    assert isinstance(market, api.PseudoNumericMarket)
+    assert market.min == -1
+    assert market.max == 3
+
+
+def test_get_multiple_choice_market():
+    market = api.get_market("TFMgBCrTM5RLZUd95zRW")
+    assert isinstance(market, api.MultipleChoiceMarket)
+    import pdb
+
+    pdb.set_trace()
 
 
 def test_get_market_noisy():
