@@ -7,8 +7,13 @@ from manifoldpy import api
 
 
 def test_get_bets():
-    bets = api.get_bets()
-    # raise NotImplementedError
+    bets = api.get_bets(limit=100)
+    assert len(bets) == 100
+
+
+def test_get_comments():
+    comments = api.get_comments(marketId="6qEWrk0Af7eWupuSWxQm")
+    assert comments == []
 
 
 def test_get_groups():
@@ -112,10 +117,7 @@ def test_get_users():
 
 
 def test_get_all_users():
-    result = api.get_all_users()
-    import pdb
-
-    pdb.set_trace()
+    api.get_all_users()
 
 
 def test_get_probabilities():

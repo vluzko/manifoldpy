@@ -15,6 +15,7 @@ V0_URL = "https://manifold.markets/api/v0/"
 
 ALL_MARKETS_URL = V0_URL + "markets"
 BETS_URL = V0_URL + "bets"
+COMMENTS_URL = V0_URL + "comments"
 GROUPS_URL = V0_URL + "groups"
 GROUP_SLUG_URL = V0_URL + "group/{group_slug}"
 GROUP_ID_URL = V0_URL + "group/by-id/{group_id}"
@@ -315,31 +316,59 @@ class MultipleChoiceMarket(Market):
 
 
 def get_bets(
+    userId: Optional[str] = None,
     username: Optional[str] = None,
-    market: Optional[str] = None,
+    marketId: Optional[str] = None,
+    marketSlug: Optional[str] = None,
     limit: int = 1000,
     before: Optional[str] = None,
 ) -> List[Bet]:
-    """Get all bets.
+    """Get bets, optionally associated with a user or market.
+    Retrieves at most 1000 bets.
     [API reference](https://docs.manifold.markets/api#get-v0bets)
 
     Args:
-        username: The user to get bets for.
-        market: The market to get bets for.
+        userId: ID of user to get bets for.
+        username: Username of user to get bets for.
+        marketId: The market to get bets for.
+        marketSlug: Slug of the market to get bets for
         limit: Number of bets to return. Maximum 1000.
         before: ID of a bet to fetch bets before.
     """
     params: Dict[str, Any] = {"limit": limit}
+    if userId is not None:
+        params["userId"] = userId
     if username is not None:
         params["username"] = username
-    if market is not None:
-        params["market"] = market
+    if marketId is not None:
+        params["marketId"] = marketId
+    if marketSlug is not None:
+        params["marketSlug"] = marketSlug
     if before is not None:
         params["before"] = before
     resp = requests.get(BETS_URL, params=params)
     resp.raise_for_status()
 
     return [weak_structure(x, Bet) for x in resp.json()]
+
+
+def get_comments(
+    marketId: Optional[str] = None, marketSlug: Optional[str] = None
+) -> List[Comment]:
+    """Get comments, optionally for a market.
+
+    Args:
+        marketId: Id of the market to get comments for.
+        marketSlug: Slug of the market to get comments for.
+    """
+    params = {}
+    if marketId is not None:
+        params["contractId"] = marketId
+    if marketSlug is not None:
+        params["contractSlug"] = marketSlug
+    resp = requests.get(COMMENTS_URL, params)
+    resp.raise_for_status()
+    return [weak_structure(x, Comment) for x in resp.json()]
 
 
 def get_groups() -> List[Group]:
