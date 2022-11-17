@@ -10,7 +10,7 @@ manifoldpy
 
 
    manifoldpy
-..    modules
+   modules
 
 
 Indices and tables
