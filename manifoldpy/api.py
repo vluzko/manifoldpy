@@ -400,7 +400,11 @@ def get_group_markets(group_id: str) -> List[Market]:
 
 
 def get_market(market_id: str) -> Market:
-    """Get a single full market.
+    """Get a single market.
+    Will not include bets or comments.
+
+    Args:
+        market_id: ID of the market to get.
 
     Raises:
         HTTPError: If the API gives a bad response.
@@ -409,6 +413,21 @@ def get_market(market_id: str) -> Market:
     resp = requests.get(SINGLE_MARKET_URL.format(market_id), timeout=20)
     resp.raise_for_status()
     return Market.from_json(resp.json())
+
+
+def get_full_market(market_id: str) -> Market:
+    """Get a single full market.
+    Will include bets and comments
+
+    Args:
+        market_id: ID of the market to fetch.
+    """
+    resp = requests.get(SINGLE_MARKET_URL.format(market_id), timeout=20)
+    resp.raise_for_status()
+    market = Market.from_json(resp.json())
+    market.bets = get_bets(marketId=market_id)
+    market.comments = get_comments(marketId=market_id)
+    return market
 
 
 def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]:
@@ -577,7 +596,7 @@ def get_full_markets(reset_cache: bool = False, cache_every: int = 500) -> List[
     missed = []
     for i, lmarket_id in enumerate(missing_markets):
         try:
-            full_market = get_market(lmarket_id)
+            full_market = get_full_market(lmarket_id)
             full_markets[full_market.id] = {
                 "market": full_market,
                 "cache_time": time(),

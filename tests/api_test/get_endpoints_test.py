@@ -50,8 +50,15 @@ def test_get_markets_limit():
     assert len(markets) == 3
 
 
-def test_get_market():
-    market = api.get_market("6qEWrk0Af7eWupuSWxQm")
+# Will be activated once the API is updated to deprecate previous get_market route.
+# def test_get_market():
+#     market = api.get_market("6qEWrk0Af7eWupuSWxQm")
+#     assert market.bets is not None
+#     assert market.comments is not None
+
+
+def test_get_full_market():
+    market = api.get_full_market("6qEWrk0Af7eWupuSWxQm")
     assert market.bets is not None
     assert market.comments is not None
 
