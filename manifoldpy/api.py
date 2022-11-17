@@ -453,7 +453,9 @@ def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]
         "MULTIPLE_CHOICE": MultipleChoiceMarket,
     }
 
-    markets = [weak_structure(x, outcome_map[x["outcomeType"]]) for x in json]
+    markets: List[Market] = [
+        weak_structure(x, outcome_map[x["outcomeType"]]) for x in json
+    ]
 
     return markets
 
