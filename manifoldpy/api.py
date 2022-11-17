@@ -15,6 +15,7 @@ V0_URL = "https://manifold.markets/api/v0/"
 
 ALL_MARKETS_URL = V0_URL + "markets"
 BETS_URL = V0_URL + "bets"
+COMMENTS_URL = V0_URL + "comments"
 GROUPS_URL = V0_URL + "groups"
 GROUP_SLUG_URL = V0_URL + "group/{group_slug}"
 GROUP_ID_URL = V0_URL + "group/by-id/{group_id}"
@@ -315,31 +316,61 @@ class MultipleChoiceMarket(Market):
 
 
 def get_bets(
+    userId: Optional[str] = None,
     username: Optional[str] = None,
-    market: Optional[str] = None,
-    limit: int = 1000,
+    marketId: Optional[str] = None,
+    marketSlug: Optional[str] = None,
+    limit: Optional[int] = 1000,
     before: Optional[str] = None,
 ) -> List[Bet]:
-    """Get all bets.
+    """Get bets, optionally associated with a user or market.
+    Retrieves at most 1000 bets.
     [API reference](https://docs.manifold.markets/api#get-v0bets)
 
     Args:
-        username: The user to get bets for.
-        market: The market to get bets for.
+        userId: ID of user to get bets for.
+        username: Username of user to get bets for.
+        marketId: The market to get bets for.
+        marketSlug: Slug of the market to get bets for
         limit: Number of bets to return. Maximum 1000.
         before: ID of a bet to fetch bets before.
     """
     params: Dict[str, Any] = {"limit": limit}
+    if userId is not None:
+        params["userId"] = userId
     if username is not None:
         params["username"] = username
-    if market is not None:
-        params["market"] = market
+    if marketId is not None:
+        params["contractId"] = marketId
+    if marketSlug is not None:
+        params["contractSlug"] = marketSlug
+    if limit is not None:
+        params["limit"] = limit
     if before is not None:
         params["before"] = before
     resp = requests.get(BETS_URL, params=params)
     resp.raise_for_status()
 
     return [weak_structure(x, Bet) for x in resp.json()]
+
+
+def get_comments(
+    marketId: Optional[str] = None, marketSlug: Optional[str] = None
+) -> List[Comment]:
+    """Get comments, optionally for a market.
+
+    Args:
+        marketId: Id of the market to get comments for.
+        marketSlug: Slug of the market to get comments for.
+    """
+    params = {}
+    if marketId is not None:
+        params["contractId"] = marketId
+    if marketSlug is not None:
+        params["contractSlug"] = marketSlug
+    resp = requests.get(COMMENTS_URL, params)
+    resp.raise_for_status()
+    return [weak_structure(x, Comment) for x in resp.json()]
 
 
 def get_groups() -> List[Group]:
@@ -371,7 +402,11 @@ def get_group_markets(group_id: str) -> List[Market]:
 
 
 def get_market(market_id: str) -> Market:
-    """Get a single full market.
+    """Get a single market.
+    Will not include bets or comments.
+
+    Args:
+        market_id: ID of the market to get.
 
     Raises:
         HTTPError: If the API gives a bad response.
@@ -380,6 +415,21 @@ def get_market(market_id: str) -> Market:
     resp = requests.get(SINGLE_MARKET_URL.format(market_id), timeout=20)
     resp.raise_for_status()
     return Market.from_json(resp.json())
+
+
+def get_full_market(market_id: str) -> Market:
+    """Get a single full market.
+    Will include bets and comments
+
+    Args:
+        market_id: ID of the market to fetch.
+    """
+    resp = requests.get(SINGLE_MARKET_URL.format(market_id), timeout=20)
+    resp.raise_for_status()
+    market = Market.from_json(resp.json())
+    market.bets = get_bets(marketId=market_id, limit=None)
+    market.comments = get_comments(marketId=market_id)
+    return market
 
 
 def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]:
@@ -396,17 +446,35 @@ def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]
         params["before"] = before
     json = requests.get(ALL_MARKETS_URL, params=params).json()  # type: ignore
 
-    # If this fails, the code is out of date.
-    all_mechanisms = {x["mechanism"] for x in json}
-    assert all_mechanisms <= {"cpmm-1", "dpm-2"}
+    outcome_map = {
+        "BINARY": BinaryMarket,
+        "FREE_RESPONSE": FreeResponseMarket,
+        "PSEUDO_NUMERIC": PseudoNumericMarket,
+        "MULTIPLE_CHOICE": MultipleChoiceMarket,
+    }
 
-    markets = [
-        BinaryMarket.from_json(x)
-        if "probability" in x
-        else weak_structure(x, FreeResponseMarket)
-        for x in json
+    markets: List[Market] = [
+        weak_structure(x, outcome_map[x["outcomeType"]]) for x in json
     ]
 
+    return markets
+
+
+def get_all_markets() -> List[Market]:
+    """Get all markets.
+    Unlike get_markets, this will get all available markets, without a limit
+    on the number fetched.
+    Automatically calls the markets endpoint until all data has been read.
+    """
+    markets = get_markets(limit=1000)
+    i = markets[0].id
+    while True:
+        new_markets = get_markets(limit=1000, before=i)
+        markets.extend(new_markets)
+        if len(new_markets) < 1000:
+            break
+        else:
+            i = markets[-1].id
     return markets
 
 
@@ -442,31 +510,42 @@ def get_user_by_id(user_id: str) -> User:
     return weak_structure(resp.json(), User)
 
 
-def get_users() -> List[User]:
-    """Get all users.
+def get_users(limit: int = 1000, before: Optional[str] = None) -> List[User]:
+    """Get users up to a limit.
     [API reference](https://docs.manifold.markets/api#get-v0users)
+
+    Args:
+        limit: The maximum number of users to get.
+        before: The ID of a user to get users before.
+
+    Returns:
+        A list of users.
     """
-    resp = requests.get(USERS_URL)
+    params: Dict[str, Any] = {"limit": limit}
+    if before is not None:
+        params["before"] = before
+    resp = requests.get(USERS_URL, params=params)  # type: ignore
     resp.raise_for_status()
     return [weak_structure(x, User) for x in resp.json()]
 
 
-def get_all_markets() -> List[Market]:
-    """Get all markets.
-    Unlike get_markets, this will get all available markets, without a limit
-    on the number fetched.
-    Automatically calls the markets endpoint until all data has been read.
+def get_all_users() -> List[User]:
+    """Get a list of all users.
+    Repeatedly calls the users endpoint until no new users are returned.
+
+    Returns:
+        A list of all users.
     """
-    markets = get_markets(limit=1000)
-    i = markets[0].id
+    users = get_users(limit=1000)
+    i = users[0].id
     while True:
-        new_markets = get_markets(limit=1000, before=i)
-        markets.extend(new_markets)
-        if len(new_markets) < 1000:
+        new_users = get_users(limit=1000, before=i)
+        users.extend(new_users)
+        if len(new_users) < 1000:
             break
         else:
-            i = markets[-1].id
-    return markets
+            i = users[-1].id
+    return users
 
 
 def get_all_bets(username: str) -> List[Bet]:
@@ -519,7 +598,7 @@ def get_full_markets(reset_cache: bool = False, cache_every: int = 500) -> List[
     missed = []
     for i, lmarket_id in enumerate(missing_markets):
         try:
-            full_market = get_market(lmarket_id)
+            full_market = get_full_market(lmarket_id)
             full_markets[full_market.id] = {
                 "market": full_market,
                 "cache_time": time(),

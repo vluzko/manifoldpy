@@ -7,8 +7,13 @@ from manifoldpy import api
 
 
 def test_get_bets():
-    bets = api.get_bets()
-    # raise NotImplementedError
+    bets = api.get_bets(limit=100)
+    assert len(bets) == 100
+
+
+def test_get_comments():
+    comments = api.get_comments(marketId="6qEWrk0Af7eWupuSWxQm")
+    assert comments == []
 
 
 def test_get_groups():
@@ -34,7 +39,7 @@ def test_get_group_markets():
 
 
 def test_get_markets():
-    markets = api.get_markets(limit=100)
+    markets = api.get_markets()
     for market in markets:
         assert market.bets is None
         assert market.comments is None
@@ -45,8 +50,15 @@ def test_get_markets_limit():
     assert len(markets) == 3
 
 
-def test_get_market():
-    market = api.get_market("6qEWrk0Af7eWupuSWxQm")
+# Will be activated once the API is updated to deprecate previous get_market route.
+# def test_get_market():
+#     market = api.get_market("6qEWrk0Af7eWupuSWxQm")
+#     assert market.bets is not None
+#     assert market.comments is not None
+
+
+def test_get_full_market():
+    market = api.get_full_market("6qEWrk0Af7eWupuSWxQm")
     assert market.bets is not None
     assert market.comments is not None
 
@@ -55,6 +67,11 @@ def test_market_broken():
     # If this stops breaking, the API has been updated
     with pytest.raises(HTTPError):
         api.get_market("YVDsNCQWr7hUrAiFiKIV")
+
+
+def test_get_binary_market():
+    market = api.get_market("L4IuKRctNWewm6CjJGx4")
+    assert isinstance(market, api.BinaryMarket)
 
 
 def test_get_free_response_market():
@@ -69,9 +86,23 @@ def test_get_free_response_market():
     assert len(market.answers) >= 5
 
 
+def test_get_pseudo_numeric_market():
+    market = api.get_market("z5Azjkk0pDw1C905REGd")
+    assert isinstance(market, api.PseudoNumericMarket)
+    assert market.min == -1
+    assert market.max == 3
+
+
+def test_get_multiple_choice_market():
+    market = api.get_market("TFMgBCrTM5RLZUd95zRW")
+    assert isinstance(market, api.MultipleChoiceMarket)
+
+
 def test_get_market_noisy():
     """Randomly sample k markets and check the data matches no matter how we get it"""
     k = 5
+    # We filter for resolved markets because if they're not resolved then
+    # the market can update in between the two API calls
     markets = [m for m in api.get_markets(limit=100) if m.isResolved]
 
     choices = random.sample(range(len(markets)), k)
@@ -105,7 +136,12 @@ def test_get_user_by_id():
 
 
 def test_get_users():
-    api.get_users()
+    users = api.get_users(limit=100)
+    assert len(users) == 100
+
+
+def test_get_all_users():
+    api.get_all_users()
 
 
 def test_get_probabilities():
