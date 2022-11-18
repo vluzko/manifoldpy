@@ -2,7 +2,10 @@ from manifoldpy import api
 
 
 def main():
-    api.get_full_markets(reset_cache=True)
+    print("Updating cached markets")
+    api.update_cached()
+    print("Getting new markets")
+    api.get_full_markets()
 
 
 if __name__ == "__main__":

@@ -187,6 +187,11 @@ class Market:
     def slug(self) -> str:
         return self.url.split("/")[-1]
 
+    def get_full_data(self) -> "Market":
+        self.bets = get_bets(marketId=self.id)
+        self.comments = get_comments(marketId=self.id)
+        return self
+
     def get_updates(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get all updates to this market.
 
@@ -446,16 +451,7 @@ def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]
         params["before"] = before
     json = requests.get(ALL_MARKETS_URL, params=params).json()  # type: ignore
 
-    outcome_map = {
-        "BINARY": BinaryMarket,
-        "FREE_RESPONSE": FreeResponseMarket,
-        "PSEUDO_NUMERIC": PseudoNumericMarket,
-        "MULTIPLE_CHOICE": MultipleChoiceMarket,
-    }
-
-    markets: List[Market] = [
-        weak_structure(x, outcome_map[x["outcomeType"]]) for x in json
-    ]
+    markets: List[Market] = [Market.from_json(x) for x in json]
 
     return markets
 
@@ -548,7 +544,12 @@ def get_all_users() -> List[User]:
     return users
 
 
-def get_all_bets(username: str) -> List[Bet]:
+def get_all_bets(
+    username: Optional[str] = None,
+    userId: Optional[str] = None,
+    marketId: Optional[str] = None,
+    marketSlug: Optional[str] = None,
+) -> List[Bet]:
     """Get all bets by a specific user.
     Unlike get_bets, this will get all available bets, without a limit
     on the number fetched.
@@ -558,11 +559,21 @@ def get_all_bets(username: str) -> List[Bet]:
 
     Args:
         username: The user to get bets for.
+        userId: The ID of the user to get bets for.
+        marketId: The ID of the market to get bets for.
+        marketSlug: The slug of the market to get bets for.
     """
     bets = get_bets(limit=1000)
     i = bets[0].id
     while True:
-        new_bets = get_bets(limit=1000, before=i, username=username)
+        new_bets = get_bets(
+            limit=1000,
+            before=i,
+            username=username,
+            userId=userId,
+            marketId=marketId,
+            marketSlug=marketSlug,
+        )
         bets.extend(new_bets)
         if len(new_bets) < 1000:
             break
@@ -571,34 +582,38 @@ def get_all_bets(username: str) -> List[Bet]:
     return bets
 
 
-def get_full_markets(reset_cache: bool = False, cache_every: int = 500) -> List[Market]:
+def load_cache() -> Dict[str, Any]:
+    try:
+        cache = pickle.load(config.CACHE_LOC.open("rb"))
+    except FileNotFoundError:
+        cache = {}
+    return cache
+
+
+def get_full_markets(reset_cache: bool = False, cache_every: int = 100) -> List[Market]:
     """Get all full markets, and cache the results.
 
     Args:
         reset_cache: Whether or not to overwrite the existing cache
         cache_every: How frequently to cache the updated markets.
     """
-
     if not reset_cache:
-        try:
-            full_markets = pickle.load(config.CACHE_LOC.open("rb"))
-        except FileNotFoundError:
-            full_markets = {}
+        full_markets = load_cache()
     else:
         full_markets = {}
         pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
 
-    lite_markets = get_all_markets()
+    lite_markets = {x.id: x for x in get_all_markets()}
     print(f"Found {len(lite_markets)} lite markets")
 
     cached_ids = {x["market"].id for x in full_markets.values()}
-    lite_ids = {x.id for x in lite_markets}
-    missing_markets = lite_ids - cached_ids
+    missing_markets = set(lite_markets.keys()) - cached_ids
     print(f"Need to fetch {len(missing_markets)} new markets.")
     missed = []
     for i, lmarket_id in enumerate(missing_markets):
         try:
-            full_market = get_full_market(lmarket_id)
+            lite_market = lite_markets[lmarket_id]
+            full_market = lite_market.get_full_data()
             full_markets[full_market.id] = {
                 "market": full_market,
                 "cache_time": time(),
@@ -615,6 +630,32 @@ def get_full_markets(reset_cache: bool = False, cache_every: int = 500) -> List[
     missed_ids = "\n".join(missed)
     print(f"Could not get {len(missed)} markets. Missing markets:\n {missed_ids}")
     return market_list
+
+
+def update_cached(cache_every: int = 100):
+    """Update all unresolved markets"""
+    cache = load_cache()
+
+    unresolved = [x["market"] for x in cache.values() if not x["market"].isResolved]
+    print(f"Found {len(unresolved)} unresolved markets")
+    missed = []
+    for i, market in enumerate(unresolved):
+        try:
+            full_market = get_full_market(market.id)
+            cache[full_market.id] = {
+                "market": full_market,
+                "cache_time": time(),
+            }
+        # If we get an HTTP Error, just skip that market
+        except requests.HTTPError:
+            missed.append(market.id)
+
+        if i % cache_every == 0:
+            print(f"Fetched {i} markets, {len(unresolved) - i} remaining")
+            pickle.dump(cache, config.CACHE_LOC.open("wb"))
+    missed_ids = "\n".join(missed)
+    print(f"Could not get {len(missed)} markets. Missing markets:\n {missed_ids}")
+    pickle.dump(cache, config.CACHE_LOC.open("wb"))
 
 
 @define
