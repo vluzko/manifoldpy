@@ -25,7 +25,7 @@ def load_cache():
 def update_lite_markets():
     cache = load_cache()
     lite_markets = api.get_all_markets(after=cache["latest_market"])
-    json = [attr.as_dict(m) for m in lite_markets]
+    json = [api.weak_unstructure(m) for m in lite_markets]
 
 
 def get_full_markets(

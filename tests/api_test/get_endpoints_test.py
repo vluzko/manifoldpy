@@ -50,6 +50,13 @@ def test_get_markets_limit():
     assert len(markets) == 3
 
 
+def test_get_markets_after():
+    markets = api.get_markets(limit=4)
+    after = markets[-1].createdTime + 1
+    after_markets = api.get_all_markets(after=after)
+    assert markets[-2] == after_markets[-1]
+
+
 # Will be activated once the API is updated to deprecate previous get_market route.
 # def test_get_market():
 #     market = api.get_market("6qEWrk0Af7eWupuSWxQm")

@@ -478,12 +478,17 @@ def get_all_markets(after: int = 0) -> List[Market]:
     Args:
         after: If present, will only fetch markets created after this timestamp.
     """
-    markets = get_markets(limit=1000)
+    markets = [x for x in get_markets(limit=1000) if x.createdTime > after]
+    if len(markets) < 1000:
+        return markets
     i = markets[0].id
     while True:
         new_markets = [
             x for x in get_markets(limit=1000, before=i) if x.createdTime > after
         ]
+        import pdb
+
+        pdb.set_trace()
         markets.extend(new_markets)
         if len(new_markets) < 1000:
             break
