@@ -1,11 +1,11 @@
-from manifoldpy import api
+from manifoldpy import cache_utils
 
 
 def main():
     print("Updating cached markets")
-    api.update_cached()
+    cache_utils.update_cached()
     print("Getting new markets")
-    api.get_full_markets()
+    cache_utils.get_full_markets()
 
 
 if __name__ == "__main__":
