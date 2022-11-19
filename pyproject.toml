@@ -25,6 +25,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "coverage==6.5.0",
     "mypy==0.991",
     "pytest==7.1.2",
     "pandas-stubs==1.5.1.221024",

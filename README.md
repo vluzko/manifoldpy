@@ -4,7 +4,7 @@
 [![PyPI version](https://badge.fury.io/py/manifoldpy.svg)](https://badge.fury.io/py/manifoldpy)
 
 
-Tools for analyzing [Manifold Markets](https://manifold.markets/home) data. Currently has bindings for their API, and code for computing various accuracy metrics (Brier score, log score, calibration).\
+Tools for analyzing [Manifold Markets](https://manifold.markets/home) data. Currently has bindings for their API, and code for computing various accuracy metrics (Brier score, log score, calibration).
 
 
 [Full Documentation](https://manifold-markets-python.readthedocs.io/en/latest/).

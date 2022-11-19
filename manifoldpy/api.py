@@ -52,6 +52,19 @@ def weak_structure(json: dict, cls: Type[T]) -> T:
     return cls(**fields)  # type: ignore
 
 
+def weak_unstructure(obj: Any) -> Dict[str, Any]:
+    """Convert an attrs class to a dict."""
+    d = {}
+    for f in obj.__attrs_attrs__:
+        key = f.name
+        val = getattr(obj, key)
+        if hasattr(val, "__atrtrs_attrs__"):
+            val = weak_unstructure(val)
+        d[key] = val
+
+    return d
+
+
 @define
 class Answer:
     """An answer to a free response market"""
@@ -187,7 +200,12 @@ class Market:
     def slug(self) -> str:
         return self.url.split("/")[-1]
 
-    def get_updates(self) -> Tuple[np.ndarray, np.ndarray]:
+    def get_full_data(self) -> "Market":
+        self.bets = get_bets(marketId=self.id)
+        self.comments = get_comments(marketId=self.id)
+        return self
+
+    def get_updates(self) -> Tuple[np.ndarray, np.ndarray]:  # pragma: no cover
         """Get all updates to this market.
 
         Returns:
@@ -195,26 +213,25 @@ class Market:
         """
         raise NotImplementedError
 
-    def num_traders(self) -> int:
+    def num_traders(self) -> int:  # pragma: no cover
         raise NotImplementedError
 
-    def probability_history(self) -> Tuple[np.ndarray, np.ndarray]:
+    def probability_history(self) -> Tuple[np.ndarray, np.ndarray]:  # pragma: no cover
         raise NotImplementedError
 
-    def start_probability(self) -> float:
+    def start_probability(self) -> float:  # pragma: no cover
         """Get the starting probability of the market"""
         raise NotImplementedError
 
-    def final_probability(self) -> float:
+    def final_probability(self) -> float:  # pragma: no cover
         """Get the final probability of this market"""
         raise NotImplementedError
 
     @staticmethod
     def from_json(json: Any) -> "Market":
-        market: Market
-        if "bets" in json:
+        if "bets" in json and json["bets"] is not None:
             json["bets"] = [weak_structure(x, Bet) for x in json["bets"]]
-        if "comments" in json:
+        if "comments" in json and json["comments"] is not None:
             json["comments"] = [weak_structure(x, Comment) for x in json["comments"]]
 
         cls: Type["Market"]
@@ -232,7 +249,7 @@ class Market:
             raise ValueError(
                 f'{json["outcomeType"]} isn\'t a known market outcome type. Submit a bug report if the json came from the API.'
             )
-        market = weak_structure(json, cls)
+        market: Market = weak_structure(json, cls)
         return market
 
 
@@ -446,30 +463,28 @@ def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]
         params["before"] = before
     json = requests.get(ALL_MARKETS_URL, params=params).json()  # type: ignore
 
-    outcome_map = {
-        "BINARY": BinaryMarket,
-        "FREE_RESPONSE": FreeResponseMarket,
-        "PSEUDO_NUMERIC": PseudoNumericMarket,
-        "MULTIPLE_CHOICE": MultipleChoiceMarket,
-    }
-
-    markets: List[Market] = [
-        weak_structure(x, outcome_map[x["outcomeType"]]) for x in json
-    ]
+    markets: List[Market] = [Market.from_json(x) for x in json]
 
     return markets
 
 
-def get_all_markets() -> List[Market]:
+def get_all_markets(after: int = 0) -> List[Market]:
     """Get all markets.
     Unlike get_markets, this will get all available markets, without a limit
     on the number fetched.
     Automatically calls the markets endpoint until all data has been read.
+
+    Args:
+        after: If present, will only fetch markets created after this timestamp.
     """
-    markets = get_markets(limit=1000)
+    markets = [x for x in get_markets(limit=1000) if x.createdTime > after]
+    if len(markets) < 1000:
+        return markets
     i = markets[0].id
     while True:
-        new_markets = get_markets(limit=1000, before=i)
+        new_markets = [
+            x for x in get_markets(limit=1000, before=i) if x.createdTime > after
+        ]
         markets.extend(new_markets)
         if len(new_markets) < 1000:
             break
@@ -548,7 +563,13 @@ def get_all_users() -> List[User]:
     return users
 
 
-def get_all_bets(username: str) -> List[Bet]:
+def get_all_bets(
+    username: Optional[str] = None,
+    userId: Optional[str] = None,
+    marketId: Optional[str] = None,
+    marketSlug: Optional[str] = None,
+    after: int = 0,
+) -> List[Bet]:
     """Get all bets by a specific user.
     Unlike get_bets, this will get all available bets, without a limit
     on the number fetched.
@@ -558,63 +579,31 @@ def get_all_bets(username: str) -> List[Bet]:
 
     Args:
         username: The user to get bets for.
+        userId: The ID of the user to get bets for.
+        marketId: The ID of the market to get bets for.
+        marketSlug: The slug of the market to get bets for.
     """
-    bets = get_bets(limit=1000)
+    bets = [b for b in get_bets(limit=1000) if b.createdTime > after]
     i = bets[0].id
     while True:
-        new_bets = get_bets(limit=1000, before=i, username=username)
+        new_bets = [
+            b
+            for b in get_bets(
+                limit=1000,
+                before=i,
+                username=username,
+                userId=userId,
+                marketId=marketId,
+                marketSlug=marketSlug,
+            )
+            if b.createdTime > after
+        ]
         bets.extend(new_bets)
         if len(new_bets) < 1000:
             break
         else:
             i = bets[-1].id
     return bets
-
-
-def get_full_markets(reset_cache: bool = False, cache_every: int = 500) -> List[Market]:
-    """Get all full markets, and cache the results.
-
-    Args:
-        reset_cache: Whether or not to overwrite the existing cache
-        cache_every: How frequently to cache the updated markets.
-    """
-
-    if not reset_cache:
-        try:
-            full_markets = pickle.load(config.CACHE_LOC.open("rb"))
-        except FileNotFoundError:
-            full_markets = {}
-    else:
-        full_markets = {}
-        pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
-
-    lite_markets = get_all_markets()
-    print(f"Found {len(lite_markets)} lite markets")
-
-    cached_ids = {x["market"].id for x in full_markets.values()}
-    lite_ids = {x.id for x in lite_markets}
-    missing_markets = lite_ids - cached_ids
-    print(f"Need to fetch {len(missing_markets)} new markets.")
-    missed = []
-    for i, lmarket_id in enumerate(missing_markets):
-        try:
-            full_market = get_full_market(lmarket_id)
-            full_markets[full_market.id] = {
-                "market": full_market,
-                "cache_time": time(),
-            }
-        # If we get an HTTP Error, just skip that market
-        except requests.HTTPError:
-            missed.append(lmarket_id)
-
-        if i % cache_every == 0:
-            print(f"Fetched {i} markets, {len(missing_markets) - i} remaining")
-            pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
-    pickle.dump(full_markets, config.CACHE_LOC.open("wb"))
-    market_list = [x["market"] for x in full_markets.values()]
-    missed_ids = "\n".join(missed)
-    print(f"Could not get {len(missed)} markets. Missing markets:\n {missed_ids}")
-    return market_list
 
 
 @define
