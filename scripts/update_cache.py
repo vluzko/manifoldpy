@@ -2,10 +2,8 @@ from manifoldpy import cache_utils
 
 
 def main():
-    print("Updating cached markets")
-    cache_utils.update_cached()
-    print("Getting new markets")
-    cache_utils.get_full_markets()
+    cache_utils.update_lite_markets()
+    cache_utils.update_bets()
 
 
 if __name__ == "__main__":

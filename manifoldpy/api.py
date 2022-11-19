@@ -486,9 +486,6 @@ def get_all_markets(after: int = 0) -> List[Market]:
         new_markets = [
             x for x in get_markets(limit=1000, before=i) if x.createdTime > after
         ]
-        import pdb
-
-        pdb.set_trace()
         markets.extend(new_markets)
         if len(new_markets) < 1000:
             break
@@ -572,6 +569,7 @@ def get_all_bets(
     userId: Optional[str] = None,
     marketId: Optional[str] = None,
     marketSlug: Optional[str] = None,
+    after: int = 0,
 ) -> List[Bet]:
     """Get all bets by a specific user.
     Unlike get_bets, this will get all available bets, without a limit
@@ -586,17 +584,21 @@ def get_all_bets(
         marketId: The ID of the market to get bets for.
         marketSlug: The slug of the market to get bets for.
     """
-    bets = get_bets(limit=1000)
+    bets = [b for b in get_bets(limit=1000) if b.createdTime > after]
     i = bets[0].id
     while True:
-        new_bets = get_bets(
-            limit=1000,
-            before=i,
-            username=username,
-            userId=userId,
-            marketId=marketId,
-            marketSlug=marketSlug,
-        )
+        new_bets = [
+            b
+            for b in get_bets(
+                limit=1000,
+                before=i,
+                username=username,
+                userId=userId,
+                marketId=marketId,
+                marketSlug=marketSlug,
+            )
+            if b.createdTime > after
+        ]
         bets.extend(new_bets)
         if len(new_bets) < 1000:
             break
