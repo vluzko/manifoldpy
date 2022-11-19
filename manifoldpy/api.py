@@ -229,11 +229,10 @@ class Market:
 
     @staticmethod
     def from_json(json: Any) -> "Market":
-        # market: Market
-        # if "bets" in json:
-        #     json["bets"] = [weak_structure(x, Bet) for x in json["bets"]]
-        # if "comments" in json:
-        #     json["comments"] = [weak_structure(x, Comment) for x in json["comments"]]
+        if "bets" in json and json["bets"] is not None:
+            json["bets"] = [weak_structure(x, Bet) for x in json["bets"]]
+        if "comments" in json and json["comments"] is not None:
+            json["comments"] = [weak_structure(x, Comment) for x in json["comments"]]
 
         cls: Type["Market"]
         if json["outcomeType"] == "BINARY":
