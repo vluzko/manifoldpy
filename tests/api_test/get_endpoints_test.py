@@ -105,20 +105,10 @@ def test_get_multiple_choice_market():
     assert isinstance(market, api.MultipleChoiceMarket)
 
 
-def test_get_market_noisy():
-    """Randomly sample k markets and check the data matches no matter how we get it"""
-    k = 5
-    # We filter for resolved markets because if they're not resolved then
-    # the market can update in between the two API calls
-    markets = [m for m in api.get_markets(limit=100) if m.isResolved]
-
-    choices = random.sample(range(len(markets)), k)
-
-    for i in choices:
-        lite_market = markets[i]
-        full_market_id = api.get_market(lite_market.id)
-        full_market_slug = api.get_slug(lite_market.slug)
-        assert full_market_id == full_market_slug
+def test_id_slug_comparison():
+    by_slug = api.get_slug("will-any-model-pass-an-undergrad-pr")
+    by_id = api.get_market("Le040Y0ZGkyAYCIEnpA2")
+    assert by_id == by_slug
 
 
 def test_by_slug():
