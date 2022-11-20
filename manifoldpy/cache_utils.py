@@ -1,9 +1,5 @@
-from collections import defaultdict
-import attr
-import pickle
-import requests
 import json
-from time import time
+from collections import defaultdict
 from typing import Dict, Any, List, TypedDict
 from manifoldpy import api, config
 
@@ -17,15 +13,17 @@ class Cache(TypedDict):
 
 def load_cache():
     try:
-        cache = json.load(config.JSON_CACHE_LOC.open("r"))
+        with config.JSON_CACHE_LOC.open("r") as f:
+            cache = json.load(f)
     except FileNotFoundError:
-        cache = Cache(latest_market=0, latest_bet=0, lite_markets=[], bets={})
+        cache = Cache(latest_market=0, latest_bet=0, lite_markets={}, bets={})
     return cache
 
 
 def save_cache(cache: Cache):
     """Save the cache to disk"""
-    json.dump(cache, config.JSON_CACHE_LOC.open("w"))
+    with config.JSON_CACHE_LOC.open("w") as f:
+        json.dump(cache, f)
 
 
 def update_lite_markets():
@@ -44,7 +42,7 @@ def update_bets():
     bets_dict = defaultdict(list)
     for b in bets:
         bets_dict[b.contractId].append(api.weak_unstructure(b))
-    cache["bets"] = bets_dict
+    cache["bets"].update(bets_dict)
     cache["latest_bet"] = max(
         max([b["createdTime"] for b in v]) for v in cache["bets"].values()
     )
@@ -53,5 +51,10 @@ def update_bets():
 
 def get_full_markets() -> List[api.Market]:
     """Get all full markets, and cache the results."""
-
-    raise NotImplementedError
+    update_lite_markets()
+    update_bets()
+    cache = load_cache()
+    markets = {k: api.Market.from_json(v) for k, v in cache["lite_markets"].items()}
+    for k, bets in cache["bets"].items():
+        markets[k].bets = [api.weak_structure(b, api.Bet) for b in bets]
+    return list(markets.values())

@@ -486,6 +486,7 @@ def get_all_markets(after: int = 0) -> List[Market]:
             x for x in get_markets(limit=1000, before=i) if x.createdTime > after
         ]
         markets.extend(new_markets)
+        print(f"Fetched {len(markets)} markets.")
         if len(new_markets) < 1000:
             break
         else:
@@ -599,6 +600,7 @@ def get_all_bets(
             if b.createdTime > after
         ]
         bets.extend(new_bets)
+        print(f"Fetched {len(bets)} bets.")
         if len(new_bets) < 1000:
             break
         else:
