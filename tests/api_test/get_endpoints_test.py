@@ -141,7 +141,7 @@ def test_get_all_users():
     api.get_all_users()
 
 
-def test_get_probabilities():
+def test_binary_probabilities():
     """Grabs a closed market and checks it
     Could break if the market ever gets deleted.
     """
@@ -155,6 +155,32 @@ def test_get_probabilities():
 
     assert np.isclose(probs[-1], 0.56, atol=0.01)
     assert times[-1] == 1652147977243
+
+
+def test_free_response_outcomes():
+    """Grabs a closed market and checks it
+    Could break if the market ever gets deleted.
+    """
+    market: api.FreeResponseMarket = api.get_market("kbCU0NTSe22jMWWwD4i5")  # type: ignore
+    outcomes, times = market.outcome_history()
+    assert outcomes == ("2025", "2030", "2035", "2040", "2045", "2050", "2029")
+    assert list(times) == [
+        1656557179637,
+        1656557186569,
+        1656557195399,
+        1656557203392,
+        1656599135523,
+        1668622799125,
+        1668623267497,
+    ]
+
+
+def test_free_response_probabilities():
+    """Grabs a closed market and checks it
+    Could break if the market ever gets deleted.
+    """
+    market = api.get_market("kbCU0NTSe22jMWWwD4i5")
+    history = market.probability_history()
 
 
 def test_get_all_bets():

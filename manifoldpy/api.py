@@ -311,6 +311,17 @@ class FreeResponseMarket(Market):
 
     answers: Optional[List[Any]] = None
 
+    def outcome_history(self) -> Tuple[Tuple[str, ...], np.ndarray]:
+        assert self.answers is not None
+        outcomes, times = zip(*[(a["text"], a["createdTime"]) for a in self.answers])
+        return outcomes, np.array(times)
+
+    def probability_history(self) -> Tuple[np.ndarray, np.ndarray]:
+        import pdb
+
+        pdb.set_trace()
+        raise NotImplementedError
+
     def final_probability(self) -> float:
         if self.bets is None:
             pass
