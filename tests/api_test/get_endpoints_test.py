@@ -161,18 +161,31 @@ def test_free_response_outcomes():
     """Grabs a closed market and checks it
     Could break if the market ever gets deleted.
     """
-    market: api.FreeResponseMarket = api.get_market("kbCU0NTSe22jMWWwD4i5")  # type: ignore
+    # market: api.FreeResponseMarket = api.get_market("kbCU0NTSe22jMWWwD4i5")  # type: ignore
+    market: api.FreeResponseMarket = api.get_slug("after-how-many-unique-traders-will")  # type: ignore
     outcomes, times = market.outcome_history()
-    assert outcomes == ("2025", "2030", "2035", "2040", "2045", "2050", "2029")
-    assert list(times) == [
-        1656557179637,
-        1656557186569,
-        1656557195399,
-        1656557203392,
-        1656599135523,
-        1668622799125,
-        1668623267497,
-    ]
+    import pdb
+
+    pdb.set_trace()
+    # assert outcomes == ("2025", "2030", "2035", "2040", "2045", "2050", "2029")
+    # assert list(times) == [
+    #     1656557179637,
+    #     1656557186569,
+    #     1656557195399,
+    #     1656557203392,
+    #     1656599135523,
+    #     1668622799125,
+    #     1668623267497,
+    # ]
+
+
+def test_free_response_full_history():
+    # market: api.FreeResponseMarket = api.get_market("kbCU0NTSe22jMWWwD4i5")  # type: ignore
+    market: api.FreeResponseMarket = api.get_slug("after-how-many-unique-traders-will")  # type: ignore
+    history = market.full_history()
+    import pdb
+
+    pdb.set_trace()
 
 
 def test_free_response_probabilities():

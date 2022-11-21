@@ -316,11 +316,30 @@ class FreeResponseMarket(Market):
         outcomes, times = zip(*[(a["text"], a["createdTime"]) for a in self.answers])
         return outcomes, np.array(times)
 
-    def probability_history(self) -> Tuple[np.ndarray, np.ndarray]:
-        import pdb
+    def full_history(self) -> Tuple[np.ndarray, np.ndarray]:
+        assert (
+            self.bets is not None
+        ), "Can't get history. Need to download bet history first."
+        self.bets = sorted(self.bets, key=lambda x: x.createdTime)
+        outcomes, _ = self.outcome_history()
+        amounts = np.zeros((len(outcomes) + 1, len(self.bets)))
+        times = np.empty(len(self.bets))
+        for i, b in enumerate(self.bets):
+            idx = int(b.outcome)
+            amounts[idx, i] = b.shares
+            times[i] = b.createdTime
+        total_invested = amounts.cumsum(axis=1)
+        squared_invested = total_invested**2
+        squared_pool = squared_invested.sum(axis=0)
+        probabilities = squared_invested / squared_pool
 
-        pdb.set_trace()
-        raise NotImplementedError
+        return probabilities, times
+
+    def probability_history(self) -> Tuple[np.ndarray, np.ndarray]:
+        assert self.resolution is not None
+        probabilities, times = self.full_history()
+        resolution = int(self.resolution)
+        return probabilities[resolution], times
 
     def final_probability(self) -> float:
         if self.bets is None:
