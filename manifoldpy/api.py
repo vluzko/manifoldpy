@@ -333,13 +333,13 @@ class FreeResponseMarket(Market):
         squared_pool = squared_invested.sum(axis=0)
         probabilities = squared_invested / squared_pool
 
-        return probabilities, times
+        return times, probabilities
 
     def probability_history(self) -> Tuple[np.ndarray, np.ndarray]:
         assert self.resolution is not None
         probabilities, times = self.full_history()
         resolution = int(self.resolution)
-        return probabilities[resolution], times
+        return times, probabilities[resolution]
 
     def final_probability(self) -> float:
         if self.bets is None:
