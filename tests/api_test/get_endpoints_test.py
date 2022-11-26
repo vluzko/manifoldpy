@@ -1,9 +1,8 @@
 """Tests of the GET endpoints of the API"""
 import numpy as np
-import random
 import pytest
-from requests import HTTPError
 from manifoldpy import api
+from api_test import SKIP_LONG
 
 
 def test_get_bets():
@@ -214,3 +213,10 @@ def test_free_response_probabilities():
 def test_get_all_bets():
     bets = api.get_all_bets("LiquidityBonusBot")
     assert len(bets) == 1056  # Not going to change because I forgot the password :D
+
+
+@SKIP_LONG
+def test_get_all_markets():
+    markets = api.get_all_markets()
+    unique_ids = set(x.id for x in markets)
+    assert len(markets) == len(unique_ids)
