@@ -510,7 +510,7 @@ def get_all_markets(after: int = 0) -> List[Market]:
     markets = [x for x in get_markets(limit=1000) if x.createdTime > after]
     if len(markets) < 1000:
         return markets
-    i = markets[0].id
+    i = markets[-1].id
     while True:
         new_markets = [
             x for x in get_markets(limit=1000, before=i) if x.createdTime > after
