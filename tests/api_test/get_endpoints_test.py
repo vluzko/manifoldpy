@@ -70,15 +70,6 @@ def test_get_full_market():
     assert market.comments is not None
 
 
-def test_market_broken():
-    # If this stops breaking, the API has been updated
-    with pytest.raises(HTTPError):
-        x = api.get_market("YVDsNCQWr7hUrAiFiKIV")
-        import pdb
-
-        pdb.set_trace()
-
-
 def test_get_binary_market():
     market = api.get_market("L4IuKRctNWewm6CjJGx4")
     assert isinstance(market, api.BinaryMarket)
