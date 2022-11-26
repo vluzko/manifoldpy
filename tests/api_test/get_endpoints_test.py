@@ -73,7 +73,10 @@ def test_get_full_market():
 def test_market_broken():
     # If this stops breaking, the API has been updated
     with pytest.raises(HTTPError):
-        api.get_market("YVDsNCQWr7hUrAiFiKIV")
+        x = api.get_market("YVDsNCQWr7hUrAiFiKIV")
+        import pdb
+
+        pdb.set_trace()
 
 
 def test_get_binary_market():
@@ -164,10 +167,37 @@ def test_free_response_outcomes():
     # market: api.FreeResponseMarket = api.get_market("kbCU0NTSe22jMWWwD4i5")  # type: ignore
     market: api.FreeResponseMarket = api.get_slug("after-how-many-unique-traders-will")  # type: ignore
     outcomes, times = market.outcome_history()
-    import pdb
+    # import pdb
 
-    pdb.set_trace()
-    # assert outcomes == ("2025", "2030", "2035", "2040", "2045", "2050", "2029")
+    # pdb.set_trace()
+    assert set(outcomes) == {
+        "10",
+        "1",
+        "5",
+        "250",
+        "2",
+        "3",
+        "4",
+        "0",
+        "6",
+        "7",
+        "8",
+        "9",
+    }
+    assert list(times) == [
+        1666423162327,
+        1666478042455,
+        1666479166006,
+        1666482554004,
+        1666489679648,
+        1666489699034,
+        1666489751907,
+        1666491644393,
+        1666595438015,
+        1666595479549,
+        1666595524918,
+        1666595532354,
+    ]
     # assert list(times) == [
     #     1656557179637,
     #     1656557186569,
