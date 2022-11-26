@@ -53,7 +53,7 @@ def test_get_markets_after():
     markets = api.get_markets(limit=4)
     after = markets[-1].createdTime + 1
     after_markets = api.get_all_markets(after=after)
-    assert markets[-2] == after_markets[-1]
+    assert markets[-2].id == after_markets[-1].id
 
 
 # Will be activated once the API is updated to deprecate previous get_market route.
