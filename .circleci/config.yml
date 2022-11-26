@@ -48,9 +48,9 @@ jobs:
           name: Run tests
           command: |
             pip install coverage
-            coverage run -m pytest
+            coverage run -m pytest tests/
             coverage report
-            coverage html
+            coverage html --omit="tests/*"
       - store_artifacts:
           path: htmlcov
       - run:
