@@ -323,7 +323,7 @@ class FreeResponseMarket(Market):
         self.bets = sorted(self.bets, key=lambda x: x.createdTime)
         outcomes, _ = self.outcome_history()
         amounts = np.zeros((len(outcomes) + 1, len(self.bets)))
-        times = np.empty(len(self.bets))
+        times = np.empty(len(self.bets), dtype=int)
         for i, b in enumerate(self.bets):
             idx = int(b.outcome)
             amounts[idx, i] = b.shares
@@ -337,7 +337,7 @@ class FreeResponseMarket(Market):
 
     def probability_history(self) -> Tuple[np.ndarray, np.ndarray]:
         assert self.resolution is not None
-        probabilities, times = self.full_history()
+        times, probabilities = self.full_history()
         resolution = int(self.resolution)
         return times, probabilities[resolution]
 

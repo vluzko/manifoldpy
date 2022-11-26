@@ -141,7 +141,7 @@ def test_binary_probabilities():
     """
     # Permalink: https://manifold.markets/guzey/will-i-create-at-least-one-more-pre
     market_id = "8Lt9ZTHCPCK58gtn0Y8n"
-    market = api.get_market(market_id)
+    market = api.get_full_market(market_id)
     times, probs = market.probability_history()
     assert len(times) == len(probs) == 23
     assert probs[0] == 0.33
@@ -189,32 +189,26 @@ def test_free_response_outcomes():
         1666595524918,
         1666595532354,
     ]
-    # assert list(times) == [
-    #     1656557179637,
-    #     1656557186569,
-    #     1656557195399,
-    #     1656557203392,
-    #     1656599135523,
-    #     1668622799125,
-    #     1668623267497,
-    # ]
 
 
 def test_free_response_full_history():
-    # market: api.FreeResponseMarket = api.get_market("kbCU0NTSe22jMWWwD4i5")  # type: ignore
-    market: api.FreeResponseMarket = api.get_slug("after-how-many-unique-traders-will")  # type: ignore
-    history = market.full_history()
-    import pdb
-
-    pdb.set_trace()
+    market: api.FreeResponseMarket = api.get_full_market("3SNUOKvgVzkSNYPgBdMX")  # type: ignore
+    times, probabilities = market.full_history()
+    assert len(times) == probabilities.shape[1]
+    assert times[0] == 1666421235253
+    assert times[-1] == 1666944777490
+    assert np.isclose(probabilities[5, -1], 0.38642623)
 
 
 def test_free_response_probabilities():
     """Grabs a closed market and checks it
     Could break if the market ever gets deleted.
     """
-    market = api.get_market("kbCU0NTSe22jMWWwD4i5")
-    history = market.probability_history()
+    market: api.FreeResponseMarket = api.get_full_market("3SNUOKvgVzkSNYPgBdMX")  # type: ignore
+    times1, final_probs = market.probability_history()
+    times2, full_probs = market.full_history()
+    assert (times1 == times2).all()
+    assert (full_probs[int(market.resolution)] == final_probs).all()  # type: ignore
 
 
 def test_get_all_bets():
