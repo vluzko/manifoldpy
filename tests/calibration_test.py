@@ -1,6 +1,6 @@
 import numpy as np
 from pytest import fixture
-from manifoldpy import calibration
+from manifoldpy import calibration, api
 
 
 class MockMarket:
@@ -9,20 +9,30 @@ class MockMarket:
         self.resolution = r
 
 
+@fixture
+def test_markets():
+    mkts = [
+        MockMarket(0.7, "YES"),
+        MockMarket(0.7, "YES"),
+        MockMarket(0.7, "NO"),
+    ]
+    return mkts
+
+
 def test_brier_score():
     mkt = MockMarket(0.7, "YES")
-    brier1 = calibration.brier_score(*calibration.extract_binary_probabilities([mkt]))
+    brier1 = calibration.brier_score(*calibration.extract_binary_probabilities([mkt]))  # type: ignore
     assert np.isclose(brier1, 0.09)
 
     brier2 = calibration.brier_score(
-        *calibration.extract_binary_probabilities([MockMarket(0.7, "NO")])
+        *calibration.extract_binary_probabilities([MockMarket(0.7, "NO")])  # type: ignore
     )
     assert np.isclose(brier2, 0.49)
 
 
 def test_log_score():
     mkt = MockMarket(0.7, "YES")
-    log1 = calibration.log_score(*calibration.extract_binary_probabilities([mkt]))
+    log1 = calibration.log_score(*calibration.extract_binary_probabilities([mkt]))  # type: ignore
     assert np.isclose(log1, 0.3566749)
 
 
@@ -32,7 +42,7 @@ def test_calibration():
         MockMarket(0.7, "YES"),
         MockMarket(0.7, "NO"),
     ]
-    c = calibration.binary_calibration(*calibration.extract_binary_probabilities(mkts))
+    c = calibration.binary_calibration(*calibration.extract_binary_probabilities(mkts))  # type: ignore
     assert np.isclose(c[7], 2 / 3)
 
 
@@ -43,7 +53,7 @@ def test_beta_binomial_calibration():
         MockMarket(0.7, "NO"),
     ]
     intervals, means = calibration.beta_binomial_calibration(
-        *calibration.extract_binary_probabilities(mkts)
+        *calibration.extract_binary_probabilities(mkts)  # type: ignore
     )
     for i in range(len(intervals)):
         if i == 7:
@@ -62,3 +72,34 @@ def test_perfect_calibration():
         calibration.perfect_calibration(1),
         np.array([0.025, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.975]),
     ).all()
+
+
+def test_market_set_accuracy(test_markets):
+
+    res = calibration.market_set_accuracy(*calibration.extract_binary_probabilities(test_markets))  # type: ignore
+    assert np.isclose(res["10% calibration"][7], 0.66666)
+    assert np.isclose(res["Brier score"], 0.22333333)
+
+
+def test_build_df():
+    market = api.get_full_market("6qEWrk0Af7eWupuSWxQm")
+    df, _ = calibration.build_dataframe([market])
+    assert df.tags[0] == ("twitter", "elon", "technology")
+
+
+def test_probability_at_time():
+    market = api.get_full_market("6qEWrk0Af7eWupuSWxQm")
+    df, histories = calibration.build_dataframe([market])
+    starts = np.array([h[0][0] for h in histories])
+    ends = np.array([h[0][-1] for h in histories])
+    midpoints = (starts + ends) * 0.5
+    df["midway"] = calibration.probability_at_time(histories, midpoints)
+    assert np.isclose(df["midway"][0], 0.222646)
+
+
+def test_markets_by_group():
+    market = api.get_full_market("6qEWrk0Af7eWupuSWxQm")
+    df, histories = calibration.build_dataframe([market])
+    res = calibration.markets_by_group(df)
+    for val in res.values():
+        assert val.all()

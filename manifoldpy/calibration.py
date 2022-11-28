@@ -117,46 +117,6 @@ def beta_binomial_calibration(
     return upper_lower, alpha_beta[:, 0] / alpha_beta.sum(axis=1)
 
 
-def plot_beta_binomial(upper_lower: np.ndarray, means: np.ndarray, decimals):
-    _, ax = plt.subplots()
-    num_bins = 10**decimals
-    x_axis = np.arange(0, 1 + 1 / num_bins, 1 / num_bins)
-    ax.scatter(x_axis, means, color="blue")
-    ax.scatter(x_axis, upper_lower[:, 0], color="black", marker="_")  # type: ignore
-    ax.scatter(x_axis, upper_lower[:, 1], color="black", marker="_")  # type: ignore
-    plt.vlines(x_axis, upper_lower[:, 0], upper_lower[:, 1], color="black")
-
-    ax.set_xticks(np.arange(0, 1 + 1 / 10, 1 / 10))
-    ax.set_xlabel("Market probability")
-    ax.set_yticks(np.arange(0, 1 + 1 / 10, 1 / 10))
-    ax.set_ylabel("Beta binomial means and 0.95 intervals")
-
-    l = np.arange(0, x_axis.max(), 0.0001)
-    ax.scatter(l, l, color="green", s=0.01, label="Perfect calibration")
-    plt.show()
-
-
-def plot_calibration(
-    c_table: np.ndarray, bins: np.ndarray, path: Optional[Path] = None
-):
-    _, ax = plt.subplots()
-    ax.scatter(bins, c_table, label="Market calibration")
-    # Perfect calibration line
-    l = np.arange(0, bins.max(), 0.0001)
-    ax.scatter(l, l, color="green", s=0.01, label="Perfect calibration")
-
-    ax.set_xticks(np.arange(0, 1 + 1 / 10, 1 / 10))
-    ax.set_xlabel("Market probability")
-    ax.set_yticks(np.arange(0, 1 + 1 / 10, 1 / 10))
-    ax.set_ylabel("Empirical probability")
-    ax.legend()
-
-    if path is None:
-        plt.show()
-    else:
-        plt.savefig(path)
-
-
 def market_set_accuracy(yes_probs: np.ndarray, no_probs: np.ndarray) -> Dict[str, Any]:
     """Compute common metrics for a set of markets
 
@@ -226,3 +186,45 @@ def markets_by_group(df: pd.DataFrame) -> Dict[str, pd.Series]:
     all_tags = {y for x in df.tags.unique() for y in x}
     filters = {x: df.tags.apply(lambda y: x in y) for x in all_tags}
     return filters
+
+
+def plot_beta_binomial(
+    upper_lower: np.ndarray, means: np.ndarray, decimals
+):  # pragma: no cover
+    _, ax = plt.subplots()
+    num_bins = 10**decimals
+    x_axis = np.arange(0, 1 + 1 / num_bins, 1 / num_bins)
+    ax.scatter(x_axis, means, color="blue")
+    ax.scatter(x_axis, upper_lower[:, 0], color="black", marker="_")  # type: ignore
+    ax.scatter(x_axis, upper_lower[:, 1], color="black", marker="_")  # type: ignore
+    plt.vlines(x_axis, upper_lower[:, 0], upper_lower[:, 1], color="black")
+
+    ax.set_xticks(np.arange(0, 1 + 1 / 10, 1 / 10))
+    ax.set_xlabel("Market probability")
+    ax.set_yticks(np.arange(0, 1 + 1 / 10, 1 / 10))
+    ax.set_ylabel("Beta binomial means and 0.95 intervals")
+
+    l = np.arange(0, x_axis.max(), 0.0001)
+    ax.scatter(l, l, color="green", s=0.01, label="Perfect calibration")
+    plt.show()
+
+
+def plot_calibration(
+    c_table: np.ndarray, bins: np.ndarray, path: Optional[Path] = None
+):  # pragma: no cover
+    _, ax = plt.subplots()
+    ax.scatter(bins, c_table, label="Market calibration")
+    # Perfect calibration line
+    l = np.arange(0, bins.max(), 0.0001)
+    ax.scatter(l, l, color="green", s=0.01, label="Perfect calibration")
+
+    ax.set_xticks(np.arange(0, 1 + 1 / 10, 1 / 10))
+    ax.set_xlabel("Market probability")
+    ax.set_yticks(np.arange(0, 1 + 1 / 10, 1 / 10))
+    ax.set_ylabel("Empirical probability")
+    ax.legend()
+
+    if path is None:
+        plt.show()
+    else:
+        plt.savefig(path)
