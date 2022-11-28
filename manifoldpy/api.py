@@ -58,7 +58,7 @@ def weak_unstructure(obj: Any) -> Dict[str, Any]:
     for f in obj.__attrs_attrs__:
         key = f.name
         val = getattr(obj, key)
-        if hasattr(val, "__atrtrs_attrs__"):
+        if hasattr(val, "__attrs_attrs__"):
             val = weak_unstructure(val)
         d[key] = val
 
