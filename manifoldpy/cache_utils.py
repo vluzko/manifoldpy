@@ -39,12 +39,15 @@ def update_lite_markets():
 def update_bets():
     cache = load_cache()
     bets = api.get_all_bets(after=cache["latest_bet"])
-    bets_dict = defaultdict(list)
     for b in bets:
-        bets_dict[b.contractId].append(api.weak_unstructure(b))
-    cache["bets"].update(bets_dict)
+        # TODO: Converting to Bet and then deconverting is dumb.
+        as_json = api.weak_unstructure(b)
+        if b.contractId in cache["bets"]:
+            cache["bets"][b.contractId][b.id] = as_json
+        else:
+            cache["bets"][b.contractId] = {b.id: as_json}
     cache["latest_bet"] = max(
-        max([b["createdTime"] for b in v]) for v in cache["bets"].values()
+        max([b["createdTime"] for b in v.values()]) for v in cache["bets"].values()
     )
     save_cache(cache)
 
@@ -56,5 +59,5 @@ def get_full_markets() -> List[api.Market]:
     cache = load_cache()
     markets = {k: api.Market.from_json(v) for k, v in cache["lite_markets"].items()}
     for k, bets in cache["bets"].items():
-        markets[k].bets = [api.weak_structure(b, api.Bet) for b in bets]
+        markets[k].bets = [api.weak_structure(b, api.Bet) for b in bets.values()]
     return list(markets.values())
