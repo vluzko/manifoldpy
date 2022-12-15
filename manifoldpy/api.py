@@ -639,7 +639,9 @@ def get_all_bets(
             break
         else:
             i = bets[-1].id
-    assert len(bets) == len({b.id for b in bets})
+    # TODO: Need a better way to determine equality of bets. `id` is not sufficient
+    # At least some bets have duplicate ids.
+    # assert len(bets) == len({b.id for b in bets})
     return bets
 
 
