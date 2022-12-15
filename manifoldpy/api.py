@@ -521,6 +521,8 @@ def get_all_markets(after: int = 0) -> List[Market]:
             break
         else:
             i = markets[-1].id
+
+    assert len(markets) == len({m.id for m in markets})
     return markets
 
 
@@ -583,7 +585,7 @@ def get_all_users() -> List[User]:
         A list of all users.
     """
     users = get_users(limit=1000)
-    i = users[0].id
+    i = users[-1].id
     while True:
         new_users = get_users(limit=1000, before=i)
         users.extend(new_users)
@@ -591,6 +593,8 @@ def get_all_users() -> List[User]:
             break
         else:
             i = users[-1].id
+
+    assert len(users) == len({u.id for u in users})
     return users
 
 
@@ -615,7 +619,7 @@ def get_all_bets(
         marketSlug: The slug of the market to get bets for.
     """
     bets = [b for b in get_bets(limit=1000) if b.createdTime > after]
-    i = bets[0].id
+    i = bets[-1].id
     while True:
         new_bets = [
             b
@@ -635,6 +639,9 @@ def get_all_bets(
             break
         else:
             i = bets[-1].id
+    # TODO: Need a better way to determine equality of bets. `id` is not sufficient
+    # At least some bets have duplicate ids.
+    # assert len(bets) == len({b.id for b in bets})
     return bets
 
 
