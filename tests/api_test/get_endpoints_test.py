@@ -10,9 +10,35 @@ def test_get_bets():
     assert len(bets) == 100
 
 
+def test_get_bets_username():
+    bets = api.get_bets(username="vluzko")
+    # Number of bets I've made at time of test creation
+    assert len(bets) >= 504
+
+
+def test_get_bets_user_id():
+    bets = api.get_bets(userId="acvO0NAsghTTgGjnsdwt94O44OT2")
+    assert len(bets) >= 504
+
+
+def test_get_bets_market_id():
+    bets = api.get_bets(marketId="pBPJS5ebbd3QD3RVi8AN")
+    assert len(bets) == 177
+
+
+def test_get_bets_market_slug():
+    bets = api.get_bets(marketSlug="will-mrna4157-go-to-phase-3-by-2025")
+    assert len(bets) == 177
+
+
+def test_get_bets_limit():
+    bets = api.get_bets(limit=3)
+    assert len(bets) == 3
+
+
 def test_get_comments():
-    comments = api.get_comments(marketId="6qEWrk0Af7eWupuSWxQm")
-    assert comments == []
+    comments = api.get_comments(marketId="pBPJS5ebbd3QD3RVi8AN")
+    assert len(comments) == 6
 
 
 def test_get_groups():
@@ -21,19 +47,19 @@ def test_get_groups():
 
 
 def test_get_group_by_slug():
-    slug = "uk-policies-by-the-next-election"
+    slug = "technical-ai-timelines"
     group = api.get_group_by_slug(slug)
-    assert group.id == "023SKlBd1yv7btKfwjHy"
+    assert group.id == "GbbX9U5pYnDeftX9lxUh"
 
 
 def test_get_group_by_id():
-    group = api.get_group_by_id("023SKlBd1yv7btKfwjHy")
-    assert group.name == "UK policies by the next election"
-    assert group.slug == "uk-policies-by-the-next-election"
+    group = api.get_group_by_id("GbbX9U5pYnDeftX9lxUh")
+    assert group.name == "Technical AI Timelines"
+    assert group.slug == "technical-ai-timelines"
 
 
 def test_get_group_markets():
-    markets = api.get_group_markets("023SKlBd1yv7btKfwjHy")
+    markets = api.get_group_markets("GbbX9U5pYnDeftX9lxUh")
     assert len(markets) >= 26
 
 
@@ -56,41 +82,36 @@ def test_get_markets_after():
     assert markets[-2].id == after_markets[-1].id
 
 
-# Will be activated once the API is updated to deprecate previous get_market route.
 def test_get_market():
-    market = api.get_market("6qEWrk0Af7eWupuSWxQm")
-    assert market.bets is not None
-    assert market.comments is not None
+    market = api.get_market("pBPJS5ebbd3QD3RVi8AN")
+    assert market.bets is None
+    assert market.comments is None
 
 
 def test_get_full_market():
-    market = api.get_full_market("6qEWrk0Af7eWupuSWxQm")
+    market = api.get_full_market("pBPJS5ebbd3QD3RVi8AN")
     assert market.bets is not None
     assert market.comments is not None
 
 
 def test_get_binary_market():
-    market = api.get_market("L4IuKRctNWewm6CjJGx4")
+    market = api.get_market("pBPJS5ebbd3QD3RVi8AN")
     assert isinstance(market, api.BinaryMarket)
 
 
 def test_get_free_response_market():
-    market = api.get_market("kbCU0NTSe22jMWWwD4i5")
-    assert (
-        market.question
-        == "When will 100 babies be born whose embryos were selected for genetic scores for intelligence?"
-    )
-    assert market.createdTime == 1656552954430
+    market = api.get_slug("monthly-paper-search-1-which-ai-pap-57c34bfc81c7")
     assert isinstance(market, api.FreeResponseMarket)
+    assert market.createdTime == 1665676857961
     assert market.answers is not None
-    assert len(market.answers) >= 5
+    assert len(market.answers) == 10
 
 
 def test_get_pseudo_numeric_market():
-    market = api.get_market("z5Azjkk0pDw1C905REGd")
+    market = api.get_slug("benchmark-gap-4-once-a-single-ai-mo")
     assert isinstance(market, api.PseudoNumericMarket)
-    assert market.min == -1
-    assert market.max == 3
+    assert market.min == 0
+    assert market.max == 240
 
 
 def test_get_multiple_choice_market():
@@ -208,11 +229,6 @@ def test_free_response_probabilities():
     times2, full_probs = market.full_history()
     assert (times1 == times2).all()
     assert (full_probs[int(market.resolution)] == final_probs).all()  # type: ignore
-
-
-def test_get_all_bets():
-    bets = api.get_all_bets("LiquidityBonusBot")
-    assert len(bets) == 1056  # Not going to change because I forgot the password :D
 
 
 @SKIP_LONG
