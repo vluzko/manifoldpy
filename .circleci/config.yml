@@ -13,22 +13,6 @@ commands:
         - run:
             name: Run tests
             command: pytest tests/
-# jobs:
-#   build_and_test:
-#     executor: python/default
-#     steps:
-#       - checkout
-#       - run:
-#           name: Install
-#           command: pip install .[dev]
-#       - run:
-#           name: Run tests
-#           command: python -m pytest
-
-# workflows:
-#   build_and_test-workflow:
-#     jobs:
-#       - build_and_test
 
 jobs:
   test-3-10:

@@ -1,4 +1,5 @@
 """API bindings"""
+import sys
 import numpy as np
 import requests
 import pickle
@@ -498,7 +499,7 @@ def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]
     return markets
 
 
-def get_all_markets(after: int = 0) -> List[Market]:
+def get_all_markets(after: int = 0, limit: int = sys.maxsize) -> List[Market]:
     """Get all markets.
     Unlike get_markets, this will get all available markets, without a limit
     on the number fetched.
@@ -506,14 +507,14 @@ def get_all_markets(after: int = 0) -> List[Market]:
 
     Args:
         after: If present, will only fetch markets created after this timestamp.
+        limit: The maximum number of markets to retrieve.
     """
-    markets = [x for x in get_markets(limit=1000) if x.createdTime > after]
-    if len(markets) < 1000:
-        return markets
-    i = markets[-1].id
+    markets: List[Market] = []
+    i = None
     while True:
+        num_to_get = min(limit - len(markets), 1000)
         new_markets = [
-            x for x in get_markets(limit=1000, before=i) if x.createdTime > after
+            x for x in get_markets(limit=num_to_get, before=i) if x.createdTime > after
         ]
         markets.extend(new_markets)
         print(f"Fetched {len(markets)} markets.")
@@ -577,23 +578,28 @@ def get_users(limit: int = 1000, before: Optional[str] = None) -> List[User]:
     return [weak_structure(x, User) for x in resp.json()]
 
 
-def get_all_users() -> List[User]:
+def get_all_users(limit: int = sys.maxsize) -> List[User]:
     """Get a list of all users.
     Repeatedly calls the users endpoint until no new users are returned.
+
+    Args:
+        limit: The maximum number of users to get.
 
     Returns:
         A list of all users.
     """
-    users = get_users(limit=1000)
-    i = users[-1].id
+    users: List[User] = []
+    i = None
     while True:
-        new_users = get_users(limit=1000, before=i)
+        num_to_get = min(limit - len(users), 1000)
+        new_users = get_users(limit=num_to_get, before=i)
         users.extend(new_users)
         if len(new_users) < 1000:
             break
         else:
             i = users[-1].id
 
+    # Users should have unique IDs
     assert len(users) == len({u.id for u in users})
     return users
 
@@ -604,6 +610,7 @@ def get_all_bets(
     marketId: Optional[str] = None,
     marketSlug: Optional[str] = None,
     after: int = 0,
+    limit: int = sys.maxsize,
 ) -> List[Bet]:
     """Get all bets by a specific user.
     Unlike get_bets, this will get all available bets, without a limit
@@ -617,14 +624,17 @@ def get_all_bets(
         userId: The ID of the user to get bets for.
         marketId: The ID of the market to get bets for.
         marketSlug: The slug of the market to get bets for.
+        after: If present, will only fetch bets created after this timestamp.
+        limit: The maximum number of bets to retrieve.
     """
-    bets = [b for b in get_bets(limit=1000) if b.createdTime > after]
-    i = bets[-1].id
+    bets: List[Bet] = []
+    i = None
     while True:
+        num_to_get = min(limit - len(bets), 1000)
         new_bets = [
             b
             for b in get_bets(
-                limit=1000,
+                limit=num_to_get,
                 before=i,
                 username=username,
                 userId=userId,
