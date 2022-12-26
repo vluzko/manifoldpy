@@ -232,3 +232,9 @@ def test_get_all_bets_limit():
     bets = api.get_all_bets(limit=1005)
     unique = set((x.id, x.createdTime) for x in bets)
     assert len(unique) == 1005
+
+
+def test_get_all_users_limit():
+    users = api.get_all_users(limit=1005)
+    unique = set(x.id for x in users)
+    assert len(unique) == 1005

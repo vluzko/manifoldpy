@@ -578,23 +578,28 @@ def get_users(limit: int = 1000, before: Optional[str] = None) -> List[User]:
     return [weak_structure(x, User) for x in resp.json()]
 
 
-def get_all_users() -> List[User]:
+def get_all_users(limit: int = sys.maxsize) -> List[User]:
     """Get a list of all users.
     Repeatedly calls the users endpoint until no new users are returned.
+
+    Args:
+        limit: The maximum number of users to get.
 
     Returns:
         A list of all users.
     """
-    users = get_users(limit=1000)
-    i = users[-1].id
+    users: List[User] = []
+    i = None
     while True:
-        new_users = get_users(limit=1000, before=i)
+        num_to_get = min(limit - len(users), 1000)
+        new_users = get_users(limit=num_to_get, before=i)
         users.extend(new_users)
         if len(new_users) < 1000:
             break
         else:
             i = users[-1].id
 
+    # Users should have unique IDs
     assert len(users) == len({u.id for u in users})
     return users
 
