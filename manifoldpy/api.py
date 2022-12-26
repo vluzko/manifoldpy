@@ -507,12 +507,9 @@ def get_all_markets(after: int = 0, limit: int = sys.maxsize) -> List[Market]:
 
     Args:
         after: If present, will only fetch markets created after this timestamp.
+        limit: The maximum number of markets to retrieve.
     """
     markets: List[Market] = []
-    # markets = [x for x in get_markets(limit=1000) if x.createdTime > after]
-    # if len(markets) < 1000:
-    #     return markets
-    # i = markets[-1].id
     i = None
     while True:
         num_to_get = min(limit - len(markets), 1000)
@@ -608,6 +605,7 @@ def get_all_bets(
     marketId: Optional[str] = None,
     marketSlug: Optional[str] = None,
     after: int = 0,
+    limit: int = sys.maxsize,
 ) -> List[Bet]:
     """Get all bets by a specific user.
     Unlike get_bets, this will get all available bets, without a limit
@@ -621,14 +619,17 @@ def get_all_bets(
         userId: The ID of the user to get bets for.
         marketId: The ID of the market to get bets for.
         marketSlug: The slug of the market to get bets for.
+        after: If present, will only fetch bets created after this timestamp.
+        limit: The maximum number of bets to retrieve.
     """
-    bets = [b for b in get_bets(limit=1000) if b.createdTime > after]
-    i = bets[-1].id
+    bets: List[Bet] = []
+    i = None
     while True:
+        num_to_get = min(limit - len(bets), 1000)
         new_bets = [
             b
             for b in get_bets(
-                limit=1000,
+                limit=num_to_get,
                 before=i,
                 username=username,
                 userId=userId,

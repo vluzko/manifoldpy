@@ -226,4 +226,9 @@ def test_get_all_markets_limit():
     markets = api.get_all_markets(limit=1005)
     unique_ids = set(x.id for x in markets)
     assert len(unique_ids) == 1005
-    assert len(markets) == 1005
+
+
+def test_get_all_bets_limit():
+    bets = api.get_all_bets(limit=1005)
+    unique = set((x.id, x.createdTime) for x in bets)
+    assert len(unique) == 1005
