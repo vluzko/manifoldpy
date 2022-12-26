@@ -1,5 +1,6 @@
 import json
 from collections import defaultdict
+import sys
 from typing import Dict, Any, List, TypedDict
 from manifoldpy import api, config
 
@@ -22,18 +23,21 @@ def load_cache() -> Cache:
 
 def save_cache(cache: Cache):
     """Save the cache to disk"""
+    # Two steps because json.dump will write partial output if there's an error partway through
+    encoded = json.dumps(cache)
     with config.JSON_CACHE_LOC.open("w") as f:
-        json.dump(cache, f)
+        f.write(encoded)
 
 
-def update_lite_markets():
+def update_lite_markets(limit: int = sys.maxsize):
     cache = load_cache()
-    lite_markets = api.get_all_markets(after=cache["latest_market"])
+    lite_markets = api.get_all_markets(after=cache["latest_market"], limit=limit)
     cache["lite_markets"].update({m.id: api.weak_unstructure(m) for m in lite_markets})
     cache["latest_market"] = max(
         m["createdTime"] for m in cache["lite_markets"].values()
     )
     save_cache(cache)
+    return cache
 
 
 def update_bets():

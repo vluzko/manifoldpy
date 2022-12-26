@@ -174,7 +174,7 @@ class Market:
     url: str
     pool: Dict[str, float]
     volume: float
-    volume7Days: float
+    # volume7Days: float
     volume24Hours: float
     outcomeType: OutcomeType
     mechanism: str
@@ -480,13 +480,16 @@ def get_full_market(market_id: str) -> Market:
     return market
 
 
-def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]:
+def get_markets(
+    limit: int = 1000, before: Optional[str] = None, as_json: bool = False
+) -> List[Market]:
     """Get a list of markets (not including comments or bets).
     [API reference](https://docs.manifold.markets/api#get-v0markets)
 
     Args:
         limit: Number of markets to fetch. Max 1000.
         before: ID of a market to fetch markets before.
+        as_json: Whether to return the raw JSON response from the API.
 
     """
     params: Dict[str, Any] = {"limit": limit}
@@ -494,12 +497,16 @@ def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]
         params["before"] = before
     json = requests.get(ALL_MARKETS_URL, params=params).json()  # type: ignore
 
-    markets: List[Market] = [Market.from_json(x) for x in json]
+    if not as_json:
+        markets: List[Market] = [Market.from_json(x) for x in json]
+        return markets
+    else:
+        return json
 
-    return markets
 
-
-def get_all_markets(after: int = 0, limit: int = sys.maxsize) -> List[Market]:
+def get_all_markets(
+    after: int = 0, limit: int = sys.maxsize, as_json: bool = False
+) -> List[Market]:
     """Get all markets.
     Unlike get_markets, this will get all available markets, without a limit
     on the number fetched.
@@ -508,13 +515,16 @@ def get_all_markets(after: int = 0, limit: int = sys.maxsize) -> List[Market]:
     Args:
         after: If present, will only fetch markets created after this timestamp.
         limit: The maximum number of markets to retrieve.
+        as_json: Whether to return the raw JSON response from the API.
     """
     markets: List[Market] = []
     i = None
     while True:
         num_to_get = min(limit - len(markets), 1000)
         new_markets = [
-            x for x in get_markets(limit=num_to_get, before=i) if x.createdTime > after
+            x
+            for x in get_markets(limit=num_to_get, before=i, as_json=as_json)
+            if x.createdTime > after
         ]
         markets.extend(new_markets)
         print(f"Fetched {len(markets)} markets.")
