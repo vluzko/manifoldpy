@@ -530,16 +530,23 @@ def get_all_markets(
         new_markets = [
             x
             for x in get_markets(limit=num_to_get, before=i, as_json=as_json)
-            if x.createdTime > after
+            if (not as_json and x.createdTime > after)
+            or (as_json and x["createdTime"] > after)
         ]
         markets.extend(new_markets)
         print(f"Fetched {len(markets)} markets.")
         if len(new_markets) < 1000:
             break
         else:
-            i = markets[-1].id
+            if as_json:
+                i = markets[-1]["id"]
+            else:
+                i = markets[-1].id
 
-    assert len(markets) == len({m.id for m in markets})
+    if not as_json:
+        assert len(markets) == len({m.id for m in markets})
+    else:
+        assert len(markets) == len({m["id"] for m in markets})
     return markets
 
 
@@ -660,14 +667,19 @@ def get_all_bets(
                 marketSlug=marketSlug,
                 as_json=as_json,
             )
-            if b.createdTime > after
+            # if b.createdTime > after
+            if (not as_json and b.createdTime > after)
+            or (as_json and b["createdTime"] > after)
         ]
         bets.extend(new_bets)
         print(f"Fetched {len(bets)} bets.")
         if len(new_bets) < 1000:
             break
         else:
-            i = bets[-1].id
+            if as_json:
+                i = bets[-1]["id"]  # type: ignore
+            else:
+                i = bets[-1].id
     # TODO: Need a better way to determine equality of bets. `id` is not sufficient
     # At least some bets have duplicate ids.
     # assert len(bets) == len({b.id for b in bets})

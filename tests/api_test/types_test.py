@@ -12,7 +12,6 @@ def test_weak_unstructure():
         "url": "https://manifold.markets/ampdot/will-elon-musk-own-more-than-90-of",
         "pool": {"NO": 22.406104954208892, "YES": 1322.035893303773},
         "volume": 3227.934376240527,
-        "volume7Days": 0,
         "volume24Hours": 0,
         "outcomeType": "BINARY",
         "mechanism": "cpmm-1",

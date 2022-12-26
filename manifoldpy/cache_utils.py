@@ -31,8 +31,10 @@ def save_cache(cache: Cache):
 
 def update_lite_markets(limit: int = sys.maxsize):
     cache = load_cache()
-    lite_markets = api.get_all_markets(after=cache["latest_market"], limit=limit)
-    cache["lite_markets"].update({m.id: api.weak_unstructure(m) for m in lite_markets})
+    lite_markets = api.get_all_markets(
+        after=cache["latest_market"], limit=limit, as_json=True
+    )
+    cache["lite_markets"].update({m["id"]: m for m in lite_markets})  # type: ignore
     cache["latest_market"] = max(
         m["createdTime"] for m in cache["lite_markets"].values()
     )
@@ -42,14 +44,12 @@ def update_lite_markets(limit: int = sys.maxsize):
 
 def update_bets(limit: int = sys.maxsize):
     cache = load_cache()
-    bets = api.get_all_bets(after=cache["latest_bet"], limit=limit)
+    bets = api.get_all_bets(after=cache["latest_bet"], limit=limit, as_json=True)
     for b in bets:
-        # TODO: Converting to Bet and then deconverting is dumb.
-        as_json = api.weak_unstructure(b)
-        if b.contractId in cache["bets"]:
-            cache["bets"][b.contractId][b.id] = as_json
+        if b["contractId"] in cache["bets"]:
+            cache["bets"][b["contractId"]][b["id"]] = b
         else:
-            cache["bets"][b.contractId] = {b.id: as_json}
+            cache["bets"][b["contractId"]] = {b["id"]: b}
     cache["latest_bet"] = max(
         max([b["createdTime"] for b in v.values()]) for v in cache["bets"].values()
     )
