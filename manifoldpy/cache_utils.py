@@ -40,9 +40,9 @@ def update_lite_markets(limit: int = sys.maxsize):
     return cache
 
 
-def update_bets():
+def update_bets(limit: int = sys.maxsize):
     cache = load_cache()
-    bets = api.get_all_bets(after=cache["latest_bet"])
+    bets = api.get_all_bets(after=cache["latest_bet"], limit=limit)
     for b in bets:
         # TODO: Converting to Bet and then deconverting is dumb.
         as_json = api.weak_unstructure(b)
@@ -54,6 +54,7 @@ def update_bets():
         max([b["createdTime"] for b in v.values()]) for v in cache["bets"].values()
     )
     save_cache(cache)
+    return cache
 
 
 def get_full_markets() -> List[api.Market]:

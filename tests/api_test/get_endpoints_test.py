@@ -41,6 +41,11 @@ def test_get_comments():
     assert len(comments) == 6
 
 
+def test_get_comments_slug():
+    comments = api.get_comments(marketSlug="will-mrna4157-go-to-phase-3-by-2025")
+    assert len(comments) == 6
+
+
 def test_get_groups():
     groups = api.get_groups()
     assert len(groups) >= 480

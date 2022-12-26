@@ -370,6 +370,7 @@ def get_bets(
     marketSlug: Optional[str] = None,
     limit: Optional[int] = 1000,
     before: Optional[str] = None,
+    as_json: bool = False,
 ) -> List[Bet]:
     """Get bets, optionally associated with a user or market.
     Retrieves at most 1000 bets.
@@ -382,6 +383,7 @@ def get_bets(
         marketSlug: Slug of the market to get bets for
         limit: Number of bets to return. Maximum 1000.
         before: ID of a bet to fetch bets before.
+        as_json: If true, return the raw json instead of a list of Bet objects.
     """
     params: Dict[str, Any] = {"limit": limit}
     if userId is not None:
@@ -399,7 +401,11 @@ def get_bets(
     resp = requests.get(BETS_URL, params=params)
     resp.raise_for_status()
 
-    return [weak_structure(x, Bet) for x in resp.json()]
+    json_bets = resp.json()
+    if not as_json:
+        return [weak_structure(x, Bet) for x in json_bets]
+    else:
+        return json_bets
 
 
 def get_comments(
@@ -621,6 +627,7 @@ def get_all_bets(
     marketSlug: Optional[str] = None,
     after: int = 0,
     limit: int = sys.maxsize,
+    as_json: bool = False,
 ) -> List[Bet]:
     """Get all bets by a specific user.
     Unlike get_bets, this will get all available bets, without a limit
@@ -636,6 +643,7 @@ def get_all_bets(
         marketSlug: The slug of the market to get bets for.
         after: If present, will only fetch bets created after this timestamp.
         limit: The maximum number of bets to retrieve.
+        as_json: Whether to return the raw JSON response from the API.
     """
     bets: List[Bet] = []
     i = None
@@ -650,6 +658,7 @@ def get_all_bets(
                 userId=userId,
                 marketId=marketId,
                 marketSlug=marketSlug,
+                as_json=as_json,
             )
             if b.createdTime > after
         ]
