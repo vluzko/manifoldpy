@@ -15,7 +15,7 @@ commands:
             command: pytest tests/
 
 jobs:
-  test-3-11:
+  test-3-10:
     docker:
       - image: circleci/python:3.10
     steps:
