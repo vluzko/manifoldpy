@@ -8,10 +8,10 @@ class Cache(TypedDict):
     latest_market: int
     latest_bet: int
     lite_markets: Dict[str, Dict[str, Any]]
-    bets: Dict[str, List[Dict[str, Any]]]
+    bets: Dict[str, Dict[str, Dict[str, Dict[str, Any]]]]
 
 
-def load_cache():
+def load_cache() -> Cache:
     try:
         with config.JSON_CACHE_LOC.open("r") as f:
             cache = json.load(f)

@@ -57,10 +57,10 @@ def test_get_markets_after():
 
 
 # Will be activated once the API is updated to deprecate previous get_market route.
-# def test_get_market():
-#     market = api.get_market("6qEWrk0Af7eWupuSWxQm")
-#     assert market.bets is not None
-#     assert market.comments is not None
+def test_get_market():
+    market = api.get_market("6qEWrk0Af7eWupuSWxQm")
+    assert market.bets is not None
+    assert market.comments is not None
 
 
 def test_get_full_market():
@@ -220,3 +220,10 @@ def test_get_all_markets():
     markets = api.get_all_markets()
     unique_ids = set(x.id for x in markets)
     assert len(markets) == len(unique_ids)
+
+
+def test_get_all_markets_limit():
+    markets = api.get_all_markets(limit=1005)
+    unique_ids = set(x.id for x in markets)
+    assert len(unique_ids) == 1005
+    assert len(markets) == 1005

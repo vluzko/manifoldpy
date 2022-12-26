@@ -13,27 +13,11 @@ commands:
         - run:
             name: Run tests
             command: pytest tests/
-# jobs:
-#   build_and_test:
-#     executor: python/default
-#     steps:
-#       - checkout
-#       - run:
-#           name: Install
-#           command: pip install .[dev]
-#       - run:
-#           name: Run tests
-#           command: python -m pytest
-
-# workflows:
-#   build_and_test-workflow:
-#     jobs:
-#       - build_and_test
 
 jobs:
-  test-3-10:
+  test-3-11:
     docker:
-      - image: circleci/python:3.10
+      - image: circleci/python:3.11
     steps:
       - checkout
       - run:
@@ -59,6 +43,11 @@ jobs:
             curl -Os https://uploader.codecov.io/latest/linux/codecov
             chmod +x codecov
             ./codecov
+  test-3-10:
+    docker:
+      - image: circleci/python:3.10
+    steps:
+      - run_tests
   test-3-9:
     docker:
       - image: circleci/python:3.9
@@ -73,6 +62,7 @@ jobs:
 workflows:
   build_and_test-workflow:
     jobs:
+      - test-3-11
       - test-3-10
       - test-3-9
       - test-3-8

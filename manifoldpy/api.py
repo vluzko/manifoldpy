@@ -1,4 +1,5 @@
 """API bindings"""
+import sys
 import numpy as np
 import requests
 import pickle
@@ -498,7 +499,7 @@ def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]
     return markets
 
 
-def get_all_markets(after: int = 0) -> List[Market]:
+def get_all_markets(after: int = 0, limit: int = sys.maxsize) -> List[Market]:
     """Get all markets.
     Unlike get_markets, this will get all available markets, without a limit
     on the number fetched.
@@ -507,13 +508,16 @@ def get_all_markets(after: int = 0) -> List[Market]:
     Args:
         after: If present, will only fetch markets created after this timestamp.
     """
-    markets = [x for x in get_markets(limit=1000) if x.createdTime > after]
-    if len(markets) < 1000:
-        return markets
-    i = markets[-1].id
+    markets: List[Market] = []
+    # markets = [x for x in get_markets(limit=1000) if x.createdTime > after]
+    # if len(markets) < 1000:
+    #     return markets
+    # i = markets[-1].id
+    i = None
     while True:
+        num_to_get = min(limit - len(markets), 1000)
         new_markets = [
-            x for x in get_markets(limit=1000, before=i) if x.createdTime > after
+            x for x in get_markets(limit=num_to_get, before=i) if x.createdTime > after
         ]
         markets.extend(new_markets)
         print(f"Fetched {len(markets)} markets.")
