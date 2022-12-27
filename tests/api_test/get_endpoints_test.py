@@ -1,8 +1,9 @@
 """Tests of the GET endpoints of the API"""
 import numpy as np
 import pytest
-from manifoldpy import api
 from api_test import SKIP_LONG
+
+from manifoldpy import api
 
 
 def test_get_bets():

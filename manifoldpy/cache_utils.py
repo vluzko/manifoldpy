@@ -1,7 +1,8 @@
 import json
-from collections import defaultdict
 import sys
-from typing import Dict, Any, List, TypedDict
+from collections import defaultdict
+from typing import Any, Dict, List, TypedDict
+
 from manifoldpy import api, config
 
 

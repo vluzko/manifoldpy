@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from pytest import fixture
+
 from manifoldpy import cache_utils, config
 
 fake_cache = Path(__file__).parent / ".full_markets.json"

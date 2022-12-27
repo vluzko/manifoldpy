@@ -3,7 +3,6 @@ from functools import partial
 
 from manifoldpy import api
 
-
 markets = api.get_markets(limit=100)
 
 

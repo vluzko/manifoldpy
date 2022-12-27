@@ -1,9 +1,10 @@
 """Calibration across all resolved markets.
 Currently only works for binary markets.
 """
-from pathlib import Path
-import numpy as np
 import pickle
+from pathlib import Path
+
+import numpy as np
 
 from manifoldpy import api, calibration, config
 

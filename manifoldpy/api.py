@@ -1,26 +1,25 @@
 """API bindings"""
-import sys
-import numpy as np
-import requests
 import pickle
-
-from attr import define, field
+import sys
+from time import time
 from typing import (
+    Any,
     Callable,
     Dict,
     List,
-    Tuple,
-    List,
-    Optional,
-    TypeVar,
-    Type,
-    Any,
     Literal,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
     Union,
 )
-from time import time
-from manifoldpy import config
 
+import numpy as np
+import requests
+from attr import define, field
+
+from manifoldpy import config
 
 V0_URL = "https://manifold.markets/api/v0/"
 

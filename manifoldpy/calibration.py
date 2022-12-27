@@ -1,12 +1,14 @@
 """Tools for calculating calibration and other accuracy metrics."""
 import bisect
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-from manifoldpy.api import Market, BinaryMarket
 from matplotlib import pyplot as plt  # type: ignore
 from scipy.stats import beta  # type: ignore
-from typing import Any, Dict, List, Optional, Tuple
+
+from manifoldpy.api import BinaryMarket, Market
 
 
 def perfect_calibration(decimals: int) -> np.ndarray:
