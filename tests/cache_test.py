@@ -31,6 +31,14 @@ def test_cache_bets(monkeypatch):
     assert res1 == res2
 
 
+def test_cache_bets_divisible(monkeypatch):
+    monkeypatch.setattr(config, "JSON_CACHE_LOC", fake_cache)
+    res1 = cache_utils.update_bets(limit=1000)
+    res2 = cache_utils.load_cache()
+
+    assert res1 == res2
+
+
 def test_cache_bets_repull(monkeypatch):
     monkeypatch.setattr(config, "JSON_CACHE_LOC", fake_cache)
     res1 = cache_utils.update_bets(limit=10)
