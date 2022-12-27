@@ -459,6 +459,8 @@ def _get_all_bets(
     i = None
     while True:
         num_to_get = min(limit - len(bets), 1000)
+        if num_to_get <= 0:
+            break
         new_bets = [
             b
             for b in _get_bets(
@@ -642,6 +644,8 @@ def _get_all_markets(after: int = 0, limit: int = sys.maxsize) -> List[Dict[str,
     i = None
     while True:
         num_to_get = min(limit - len(markets), 1000)
+        if num_to_get <= 0:
+            break
         new_markets = [
             x
             for x in _get_markets(limit=num_to_get, before=i)
