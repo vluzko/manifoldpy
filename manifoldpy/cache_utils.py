@@ -32,11 +32,9 @@ def save_cache(cache: Cache):
         f.write(encoded)
 
 
-def update_lite_markets(limit: int = sys.maxsize):
+def update_lite_markets():
     cache = load_cache()
-    lite_markets: List[Dict[str, Any]] = api._get_all_markets(
-        after=cache["latest_market"], limit=limit
-    )
+    lite_markets = api._get_all_markets(after=cache["latest_market"])
     cache["lite_markets"].update({m["id"]: m for m in lite_markets})  # type: ignore
     cache["latest_market"] = max(
         m["createdTime"] for m in cache["lite_markets"].values()
@@ -45,11 +43,9 @@ def update_lite_markets(limit: int = sys.maxsize):
     return cache
 
 
-def update_bets(limit: int = sys.maxsize):
+def update_bets():
     cache = load_cache()
-    bets: List[Dict[str, Any]] = api._get_all_bets(
-        after=cache["latest_bet"], limit=limit
-    )
+    bets = api._get_all_bets(after=cache["latest_bet"])
     for b in bets:
         if b["contractId"] in cache["bets"]:
             cache["bets"][b["contractId"]][b["id"]] = b
