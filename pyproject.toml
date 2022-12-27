@@ -1,6 +1,6 @@
 [project]
 name = "manifoldpy"
-version = "1.1.0"
+version = "1.1.1"
 authors = [
   { name="Vincent Luczkow", email="vincent.luczkow@gmail.com" },
 ]
@@ -44,3 +44,7 @@ dev = [
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+
+[tool.isort]
+profile = "black"

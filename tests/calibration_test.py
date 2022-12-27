@@ -1,6 +1,7 @@
 import numpy as np
 from pytest import fixture
-from manifoldpy import calibration, api
+
+from manifoldpy import api, calibration
 
 
 class MockMarket:

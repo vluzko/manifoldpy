@@ -1,5 +1,6 @@
-from time import time
 from sys import argv
+from time import time
+
 from manifoldpy import api
 
 
