@@ -5,7 +5,19 @@ import requests
 import pickle
 
 from attr import define, field
-from typing import Dict, List, Tuple, List, Optional, TypeVar, Type, Any, Literal
+from typing import (
+    Callable,
+    Dict,
+    List,
+    Tuple,
+    List,
+    Optional,
+    TypeVar,
+    Type,
+    Any,
+    Literal,
+    Union,
+)
 from time import time
 from manifoldpy import config
 
@@ -174,7 +186,6 @@ class Market:
     url: str
     pool: Dict[str, float]
     volume: float
-    volume7Days: float
     volume24Hours: float
     outcomeType: OutcomeType
     mechanism: str
@@ -363,14 +374,14 @@ class MultipleChoiceMarket(Market):
     pass
 
 
-def get_bets(
+def _get_bets(
     userId: Optional[str] = None,
     username: Optional[str] = None,
     marketId: Optional[str] = None,
     marketSlug: Optional[str] = None,
     limit: Optional[int] = 1000,
     before: Optional[str] = None,
-) -> List[Bet]:
+) -> List[Dict[str, Any]]:
     """Get bets, optionally associated with a user or market.
     Retrieves at most 1000 bets.
     [API reference](https://docs.manifold.markets/api#get-v0bets)
@@ -399,7 +410,116 @@ def get_bets(
     resp = requests.get(BETS_URL, params=params)
     resp.raise_for_status()
 
-    return [weak_structure(x, Bet) for x in resp.json()]
+    return resp.json()
+
+
+def get_bets(
+    userId: Optional[str] = None,
+    username: Optional[str] = None,
+    marketId: Optional[str] = None,
+    marketSlug: Optional[str] = None,
+    limit: Optional[int] = 1000,
+    before: Optional[str] = None,
+) -> List[Bet]:
+    """Get bets, optionally associated with a user or market.
+    Retrieves at most 1000 bets.
+    [API reference](https://docs.manifold.markets/api#get-v0bets)
+
+    Args:
+        userId: ID of user to get bets for.
+        username: Username of user to get bets for.
+        marketId: The market to get bets for.
+        marketSlug: Slug of the market to get bets for
+        limit: Number of bets to return. Maximum 1000.
+        before: ID of a bet to fetch bets before.
+        as_json: If true, return the raw json instead of a list of Bet objects.
+    """
+    return [
+        weak_structure(x, Bet)
+        for x in _get_bets(
+            userId=userId,
+            username=username,
+            marketId=marketId,
+            marketSlug=marketSlug,
+            limit=limit,
+            before=before,
+        )
+    ]
+
+
+def _get_all_bets(
+    username: Optional[str] = None,
+    userId: Optional[str] = None,
+    marketId: Optional[str] = None,
+    marketSlug: Optional[str] = None,
+    after: int = 0,
+    limit: int = sys.maxsize,
+) -> List[Dict[str, Any]]:
+    """Underlying API call for `get_all_bets`."""
+    bets: List[Dict[str, Any]] = []
+    i = None
+    while True:
+        num_to_get = min(limit - len(bets), 1000)
+        new_bets = [
+            b
+            for b in _get_bets(
+                limit=num_to_get,
+                before=i,
+                username=username,
+                userId=userId,
+                marketId=marketId,
+                marketSlug=marketSlug,
+            )
+            # if b.createdTime > after
+            if b["createdTime"] > after
+        ]
+        bets.extend(new_bets)
+        print(f"Fetched {len(bets)} bets.")
+        if len(new_bets) < 1000:
+            break
+        else:
+            i = bets[-1]["id"]
+    # TODO: Need a better way to determine equality of bets. `id` is not sufficient
+    # At least some bets have duplicate ids.
+    # assert len(bets) == len({b.id for b in bets})
+    return bets
+
+
+def get_all_bets(
+    username: Optional[str] = None,
+    userId: Optional[str] = None,
+    marketId: Optional[str] = None,
+    marketSlug: Optional[str] = None,
+    after: int = 0,
+    limit: int = sys.maxsize,
+) -> List[Bet]:
+    """Get all bets by a specific user.
+    Unlike get_bets, this will get all available bets, without a limit
+    on the number fetched.
+    Automatically calls the bets endpoint until all data has been read.
+    You must provide at least one of the arguments, otherwise the server
+    will be very sad.
+
+    Args:
+        username: The user to get bets for.
+        userId: The ID of the user to get bets for.
+        marketId: The ID of the market to get bets for.
+        marketSlug: The slug of the market to get bets for.
+        after: If present, will only fetch bets created after this timestamp.
+        limit: The maximum number of bets to retrieve.
+        as_json: Whether to return the raw JSON response from the API.
+    """
+    return [
+        weak_structure(x, Bet)
+        for x in _get_all_bets(
+            username=username,
+            userId=userId,
+            marketId=marketId,
+            marketSlug=marketSlug,
+            after=after,
+            limit=limit,
+        )
+    ]
 
 
 def get_comments(
@@ -456,9 +576,6 @@ def get_market(market_id: str) -> Market:
     Args:
         market_id: ID of the market to get.
 
-    Raises:
-        HTTPError: If the API gives a bad response.
-            This is known to happen with markets with a very large number of bets.
     """
     resp = requests.get(SINGLE_MARKET_URL.format(market_id), timeout=20)
     resp.raise_for_status()
@@ -472,12 +589,35 @@ def get_full_market(market_id: str) -> Market:
     Args:
         market_id: ID of the market to fetch.
     """
-    resp = requests.get(SINGLE_MARKET_URL.format(market_id), timeout=20)
-    resp.raise_for_status()
-    market = Market.from_json(resp.json())
+    # resp = requests.get(SINGLE_MARKET_URL.format(market_id), timeout=20)
+    # resp.raise_for_status()
+    # market = Market.from_json(resp.json())
+    market = get_market(market_id)
     market.bets = get_bets(marketId=market_id, limit=None)
     market.comments = get_comments(marketId=market_id)
     return market
+
+
+def _get_markets(
+    limit: int = 1000, before: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """Get a list of markets (not including comments or bets).
+    [API reference](https://docs.manifold.markets/api#get-v0markets)
+
+
+    Args:
+        limit: Number of markets to fetch. Max 1000.
+        before: ID of a market to fetch markets before.
+
+    Returns:
+        The list of markets as raw JSON.
+    """
+    params: Dict[str, Any] = {"limit": limit}
+    if before is not None:
+        params["before"] = before
+    resp = requests.get(ALL_MARKETS_URL, params=params)
+    resp.raise_for_status()
+    return resp.json()
 
 
 def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]:
@@ -489,13 +629,33 @@ def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]
         before: ID of a market to fetch markets before.
 
     """
-    params: Dict[str, Any] = {"limit": limit}
-    if before is not None:
-        params["before"] = before
-    json = requests.get(ALL_MARKETS_URL, params=params).json()  # type: ignore
+    json_markets = _get_markets(limit=limit, before=before)
+    return [Market.from_json(x) for x in json_markets]
 
-    markets: List[Market] = [Market.from_json(x) for x in json]
 
+def _get_all_markets(after: int = 0, limit: int = sys.maxsize) -> List[Dict[str, Any]]:
+    """Underlying API call for `get_all_markets`.
+
+    Returns:
+        Markets as raw JSON.
+    """
+    markets: List[Dict[str, Any]] = []
+    i = None
+    while True:
+        num_to_get = min(limit - len(markets), 1000)
+        new_markets = [
+            x
+            for x in _get_markets(limit=num_to_get, before=i)
+            if x["createdTime"] > after
+        ]
+        markets.extend(new_markets)  # type: ignore
+        print(f"Fetched {len(markets)} markets.")
+        if len(new_markets) < 1000:
+            break
+        else:
+            i = markets[-1]["id"]
+
+    assert len(markets) == len({m["id"] for m in markets})  # type: ignore
     return markets
 
 
@@ -509,22 +669,7 @@ def get_all_markets(after: int = 0, limit: int = sys.maxsize) -> List[Market]:
         after: If present, will only fetch markets created after this timestamp.
         limit: The maximum number of markets to retrieve.
     """
-    markets: List[Market] = []
-    i = None
-    while True:
-        num_to_get = min(limit - len(markets), 1000)
-        new_markets = [
-            x for x in get_markets(limit=num_to_get, before=i) if x.createdTime > after
-        ]
-        markets.extend(new_markets)
-        print(f"Fetched {len(markets)} markets.")
-        if len(new_markets) < 1000:
-            break
-        else:
-            i = markets[-1].id
-
-    assert len(markets) == len({m.id for m in markets})
-    return markets
+    return [Market.from_json(x) for x in _get_all_markets(after=after, limit=limit)]
 
 
 def get_slug(slug: str) -> Market:
@@ -540,7 +685,7 @@ def get_user_by_name(username: str) -> User:
     [API reference](https://docs.manifold.markets/api#get-v0userusername)
 
     Args:
-        username:
+        username: The user's username.
     """
     resp = requests.get(USERNAME_URL.format(username))
     resp.raise_for_status()
@@ -552,7 +697,7 @@ def get_user_by_id(user_id: str) -> User:
     [API reference](https://docs.manifold.markets/api#get-v0userby-idid)
 
     Args:
-        user_id:
+        user_id: The user's ID.
     """
     resp = requests.get(USER_ID_URL.format(user_id))
     resp.raise_for_status()
@@ -602,57 +747,6 @@ def get_all_users(limit: int = sys.maxsize) -> List[User]:
     # Users should have unique IDs
     assert len(users) == len({u.id for u in users})
     return users
-
-
-def get_all_bets(
-    username: Optional[str] = None,
-    userId: Optional[str] = None,
-    marketId: Optional[str] = None,
-    marketSlug: Optional[str] = None,
-    after: int = 0,
-    limit: int = sys.maxsize,
-) -> List[Bet]:
-    """Get all bets by a specific user.
-    Unlike get_bets, this will get all available bets, without a limit
-    on the number fetched.
-    Automatically calls the bets endpoint until all data has been read.
-    You must provide at least one of the arguments, otherwise the server
-    will be very sad.
-
-    Args:
-        username: The user to get bets for.
-        userId: The ID of the user to get bets for.
-        marketId: The ID of the market to get bets for.
-        marketSlug: The slug of the market to get bets for.
-        after: If present, will only fetch bets created after this timestamp.
-        limit: The maximum number of bets to retrieve.
-    """
-    bets: List[Bet] = []
-    i = None
-    while True:
-        num_to_get = min(limit - len(bets), 1000)
-        new_bets = [
-            b
-            for b in get_bets(
-                limit=num_to_get,
-                before=i,
-                username=username,
-                userId=userId,
-                marketId=marketId,
-                marketSlug=marketSlug,
-            )
-            if b.createdTime > after
-        ]
-        bets.extend(new_bets)
-        print(f"Fetched {len(bets)} bets.")
-        if len(new_bets) < 1000:
-            break
-        else:
-            i = bets[-1].id
-    # TODO: Need a better way to determine equality of bets. `id` is not sufficient
-    # At least some bets have duplicate ids.
-    # assert len(bets) == len({b.id for b in bets})
-    return bets
 
 
 @define

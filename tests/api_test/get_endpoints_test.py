@@ -41,6 +41,11 @@ def test_get_comments():
     assert len(comments) == 6
 
 
+def test_get_comments_slug():
+    comments = api.get_comments(marketSlug="will-mrna4157-go-to-phase-3-by-2025")
+    assert len(comments) == 6
+
+
 def test_get_groups():
     groups = api.get_groups()
     assert len(groups) >= 480
@@ -244,9 +249,21 @@ def test_get_all_markets_limit():
     assert len(unique_ids) == 1005
 
 
+def test_get_all_markets_json():
+    markets = api._get_all_markets(limit=1005)
+    unique_ids = set(x["id"] for x in markets)
+    assert len(unique_ids) == 1005
+
+
 def test_get_all_bets_limit():
     bets = api.get_all_bets(limit=1005)
     unique = set((x.id, x.createdTime) for x in bets)
+    assert len(unique) == 1005
+
+
+def test_get_all_bets_json():
+    bets = api._get_all_bets(limit=1005)
+    unique = set((x["id"], x["createdTime"]) for x in bets)
     assert len(unique) == 1005
 
 

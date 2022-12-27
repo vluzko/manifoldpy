@@ -1,14 +1,17 @@
 import json
 from collections import defaultdict
+import sys
 from typing import Dict, Any, List, TypedDict
 from manifoldpy import api, config
 
 
 class Cache(TypedDict):
+
     latest_market: int
     latest_bet: int
     lite_markets: Dict[str, Dict[str, Any]]
-    bets: Dict[str, Dict[str, Dict[str, Dict[str, Any]]]]
+    # Market ID -> {bet ID -> bet}
+    bets: Dict[str, Dict[str, Dict[str, Any]]]
 
 
 def load_cache() -> Cache:
@@ -22,34 +25,42 @@ def load_cache() -> Cache:
 
 def save_cache(cache: Cache):
     """Save the cache to disk"""
+    # Two steps because json.dump will write partial output if there's an error partway through
+    encoded = json.dumps(cache)
     with config.JSON_CACHE_LOC.open("w") as f:
-        json.dump(cache, f)
+        f.write(encoded)
 
 
-def update_lite_markets():
+def update_lite_markets(limit: int = sys.maxsize):
     cache = load_cache()
-    lite_markets = api.get_all_markets(after=cache["latest_market"])
-    cache["lite_markets"].update({m.id: api.weak_unstructure(m) for m in lite_markets})
+    lite_markets: List[Dict[str, Any]] = api._get_all_markets(
+        after=cache["latest_market"], limit=limit
+    )
+    cache["lite_markets"].update({m["id"]: m for m in lite_markets})  # type: ignore
     cache["latest_market"] = max(
         m["createdTime"] for m in cache["lite_markets"].values()
     )
     save_cache(cache)
+    return cache
 
 
-def update_bets():
+def update_bets(limit: int = sys.maxsize):
     cache = load_cache()
-    bets = api.get_all_bets(after=cache["latest_bet"])
-    for b in bets:
-        # TODO: Converting to Bet and then deconverting is dumb.
-        as_json = api.weak_unstructure(b)
-        if b.contractId in cache["bets"]:
-            cache["bets"][b.contractId][b.id] = as_json
-        else:
-            cache["bets"][b.contractId] = {b.id: as_json}
-    cache["latest_bet"] = max(
-        max([b["createdTime"] for b in v.values()]) for v in cache["bets"].values()
+    bets: List[Dict[str, Any]] = api._get_all_bets(
+        after=cache["latest_bet"], limit=limit
     )
+    for b in bets:
+        if b["contractId"] in cache["bets"]:
+            cache["bets"][b["contractId"]][b["id"]] = b
+        else:
+            cache["bets"][b["contractId"]] = {b["id"]: b}
+
+    last_bets = (
+        max((b["createdTime"] for b in v.values())) for v in cache["bets"].values()
+    )
+    cache["latest_bet"] = max(last_bets)
     save_cache(cache)
+    return cache
 
 
 def get_full_markets() -> List[api.Market]:
