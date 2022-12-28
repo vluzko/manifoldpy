@@ -28,16 +28,31 @@ def make_fake_bets(n: int = 10):
     return fake_bets
 
 
+def count_bets(cache: cache_utils.Cache) -> int:
+    count = 0
+    for _mkt_id, bets in cache["bets"].items():
+        count += len(bets)
+    return count
+
+
+def patch_cache(func):
+    def wrapper(monkeypatch, *args, **kwargs):
+        monkeypatch.setattr(config, "JSON_CACHE_LOC", fake_cache)
+        return func(monkeypatch, *args, **kwargs)
+
+    return wrapper
+
+
+@patch_cache
 def test_cache_markets(monkeypatch):
-    monkeypatch.setattr(config, "JSON_CACHE_LOC", fake_cache)
     monkeypatch.setattr(api, "_get_all_markets", make_fake_mkts())
     res1 = cache_utils.update_lite_markets()
     res2 = json.loads(fake_cache.read_text())
     assert res1 == res2
 
 
+@patch_cache
 def test_cache_markets_repull(monkeypatch):
-    monkeypatch.setattr(config, "JSON_CACHE_LOC", fake_cache)
     monkeypatch.setattr(api, "_get_all_markets", make_fake_mkts())
     res1 = cache_utils.update_lite_markets()
     res2 = cache_utils.update_lite_markets()
@@ -46,8 +61,8 @@ def test_cache_markets_repull(monkeypatch):
     assert res1 == res2 == res3
 
 
+@patch_cache
 def test_cache_bets(monkeypatch):
-    monkeypatch.setattr(config, "JSON_CACHE_LOC", fake_cache)
     monkeypatch.setattr(api, "_get_all_bets", make_fake_bets())
     res1 = cache_utils.update_bets()
     res2 = cache_utils.load_cache()
@@ -55,8 +70,8 @@ def test_cache_bets(monkeypatch):
     assert res1 == res2
 
 
+@patch_cache
 def test_cache_bets_divisible(monkeypatch):
-    monkeypatch.setattr(config, "JSON_CACHE_LOC", fake_cache)
     monkeypatch.setattr(api, "_get_all_bets", make_fake_bets(1000))
     res1 = cache_utils.update_bets()
     res2 = cache_utils.load_cache()
@@ -64,13 +79,31 @@ def test_cache_bets_divisible(monkeypatch):
     assert res1 == res2
 
 
+@patch_cache
 def test_cache_bets_repull(monkeypatch):
-    monkeypatch.setattr(config, "JSON_CACHE_LOC", fake_cache)
     monkeypatch.setattr(api, "_get_all_bets", make_fake_bets())
     res1 = cache_utils.update_bets()
     res2 = cache_utils.update_bets()
     res3 = cache_utils.load_cache()
     assert res1 == res2 == res3
+
+
+@patch_cache
+def test_get_full_markets(monkeypatch):
+    monkeypatch.setattr(api, "_get_all_markets", make_fake_mkts())
+    monkeypatch.setattr(api, "_get_all_bets", make_fake_bets(100))
+    f = cache_utils.load_cache
+
+    res = cache_utils.get_full_markets()
+    assert len(res) == 10
+
+
+@patch_cache
+def test_backfill(_monkeypatch):
+    res1 = cache_utils.backfill_bets(limit=10)
+    res2 = cache_utils.backfill_bets(limit=10)
+    assert count_bets(res1) == 10
+    assert count_bets(res2) == 20
 
 
 @fixture(autouse=True)

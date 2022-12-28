@@ -453,10 +453,11 @@ def _get_all_bets(
     marketSlug: Optional[str] = None,
     after: int = 0,
     limit: int = sys.maxsize,
+    before_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Underlying API call for `get_all_bets`."""
     bets: List[Dict[str, Any]] = []
-    i = None
+    i = before_id
     while True:
         num_to_get = min(limit - len(bets), 1000)
         if num_to_get <= 0:
