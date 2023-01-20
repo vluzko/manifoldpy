@@ -106,6 +106,19 @@ def test_backfill(_monkeypatch):
     assert count_bets(res2) == 20
 
 
+def test_cache_error():
+    problem_bet = "G8p2Td0gdR2TMBb5AXxa"
+    market = api.get_market("will-bitcoin-be-worth-more-than-600")
+    x = api._get_bets(marketId="will-bitcoin-be-worth-more-than-600")
+    y = cache_utils.load_cache()
+    bets = y["bets"]["will-bitcoin-be-worth-more-than-600"]
+    bet = bets[problem_bet]
+    import pdb
+
+    pdb.set_trace()
+    raise NotImplementedError
+
+
 @fixture(autouse=True)
 def run_after():
     yield

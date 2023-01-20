@@ -56,18 +56,21 @@ def add_bets_to_cache(cache, bets):
     return cache
 
 
-def backfill_bets(limit: int = 100000):
+def backfill_bets(limit: int = 500000):
     cache = load_cache()
 
     if len(cache["bets"]) == 0:
-        earliest_bet = None
+        earliest_bet_id = None
     else:
         first_bets = (
             min((b for b in v.values()), key=lambda x: x["createdTime"])
             for v in cache["bets"].values()
         )
-        earliest_bet = min(first_bets, key=lambda x: x["createdTime"])["id"]
-    older_bets = api._get_all_bets(before_id=earliest_bet, limit=limit)
+        earliest_bet = min(first_bets, key=lambda x: x["createdTime"])
+        earliest_bet_id = earliest_bet["id"]
+
+    print(earliest_bet_id)
+    older_bets = api._get_all_bets(before_id=earliest_bet_id, limit=limit)
     cache = add_bets_to_cache(cache, older_bets)
     save_cache(cache)
     return cache
@@ -87,10 +90,7 @@ def update_bets():
     return cache
 
 
-def get_full_markets() -> List[api.Market]:
-    """Get all full markets, and cache the results."""
-    update_lite_markets()
-    update_bets()
+def load_full_markets() -> List[api.Market]:
     cache = load_cache()
     markets = {k: api.Market.from_json(v) for k, v in cache["lite_markets"].items()}
     for k, market in markets.items():
@@ -101,7 +101,11 @@ def get_full_markets() -> List[api.Market]:
             market.bets = []
 
         market.comments = []
-        # market.bets = []
-    # for k, bets in cache["bets"].items():
-    #     markets[k].bets = [api.weak_structure(b, api.Bet) for b in bets.values()]
     return list(markets.values())
+
+
+def get_full_markets() -> List[api.Market]:
+    """Get all full markets, and cache the results."""
+    update_lite_markets()
+    update_bets()
+    return load_full_markets()

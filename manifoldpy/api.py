@@ -472,7 +472,6 @@ def _get_all_bets(
                 marketId=marketId,
                 marketSlug=marketSlug,
             )
-            # if b.createdTime > after
             if b["createdTime"] > after
         ]
         bets.extend(new_bets)
