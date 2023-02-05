@@ -122,4 +122,4 @@ def test_cache_error():
 @fixture(autouse=True)
 def run_after():
     yield
-    fake_cache.unlink()
+    fake_cache.unlink(missing_ok=True)
