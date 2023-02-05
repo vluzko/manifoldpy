@@ -145,7 +145,7 @@ def market_set_accuracy(yes_probs: np.ndarray, no_probs: np.ndarray) -> Dict[str
     return {
         "1% calibration": one_percent,
         "10% calibration": ten_percent,
-        "beta-binomal": (beta_means, beta_interval),
+        "beta-binomial": (beta_means, beta_interval),
         **scores,
     }
 
