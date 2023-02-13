@@ -1,6 +1,5 @@
+import pandas as pd
 import json
-import sys
-from collections import defaultdict
 from typing import Any, Dict, List, TypedDict
 
 from manifoldpy import api, config
@@ -109,3 +108,10 @@ def get_full_markets() -> List[api.Market]:
     update_lite_markets()
     update_bets()
     return load_full_markets()
+
+
+def load_binary_markets_as_df() -> pd.DataFrame:
+    cache = load_cache()
+    fields = ['id', 'createdTime', '']
+    rows = [m for m in cache['lite_markets']]
+    raise NotImplementedError
