@@ -52,14 +52,6 @@ def log_score(yes_probs: np.ndarray, no_probs: np.ndarray) -> float:
     return np.sum(-np.log(all_probs))
 
 
-def relative_log_score(markets: List[Market]) -> float:
-    """Relative log score of all markets against the opening position
-    This is the number of nats the market adds against the opening position.
-    Probably not very meaningful, given that the opening position is usually 0.5
-    """
-    raise NotImplementedError
-
-
 def bet_counts(
     yes_probs: np.ndarray, no_probs: np.ndarray, decimals: int
 ) -> np.ndarray:

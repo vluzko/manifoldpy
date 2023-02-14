@@ -64,15 +64,26 @@ def weak_structure(json: dict, cls: Type[T]) -> T:
     return cls(**fields)  # type: ignore
 
 
+def _maybe_unstructure(val: Any) -> Any:
+    if hasattr(val, "__attrs_attrs__"):
+        return weak_unstructure(val)
+    elif isinstance(val, list):
+        return [_maybe_unstructure(v) for v in val]
+    else:
+        return val
+
+
 def weak_unstructure(obj: Any) -> Dict[str, Any]:
     """Convert an attrs class to a dict."""
     d = {}
     for f in obj.__attrs_attrs__:
         key = f.name
         val = getattr(obj, key)
-        if hasattr(val, "__attrs_attrs__"):
-            val = weak_unstructure(val)
-        d[key] = val
+        # if hasattr(val, "__attrs_attrs__"):
+        #     val = weak_unstructure(val)
+        # elif isinstance(val, list):
+        #     val = [weak_unstructure(v) for v in val]
+        d[key] = _maybe_unstructure(val)
 
     return d
 
@@ -256,6 +267,8 @@ class Market:
             cls = PseudoNumericMarket
         elif json["outcomeType"] == "MULTIPLE_CHOICE":
             cls = MultipleChoiceMarket
+        elif json["outcomeType"] == "QUADRATIC_FUNDING":
+            cls = QuadraticFundingMarket
         else:
             raise ValueError(
                 f'{json["outcomeType"]} isn\'t a known market outcome type. Submit a bug report if the json came from the API.'
@@ -370,6 +383,11 @@ class PseudoNumericMarket(Market):
 
 @define
 class MultipleChoiceMarket(Market):
+    pass
+
+
+@define
+class QuadraticFundingMarket(Market):
     pass
 
 
