@@ -256,6 +256,8 @@ class Market:
             cls = PseudoNumericMarket
         elif json["outcomeType"] == "MULTIPLE_CHOICE":
             cls = MultipleChoiceMarket
+        elif json["outcomeType"] == "QUADRATIC_FUNDING":
+            cls = QuadraticFundingMarket
         else:
             raise ValueError(
                 f'{json["outcomeType"]} isn\'t a known market outcome type. Submit a bug report if the json came from the API.'
@@ -370,6 +372,11 @@ class PseudoNumericMarket(Market):
 
 @define
 class MultipleChoiceMarket(Market):
+    pass
+
+
+@define
+class QuadraticFundingMarket(Market):
     pass
 
 
