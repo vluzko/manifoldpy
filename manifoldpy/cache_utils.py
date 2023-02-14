@@ -1,7 +1,7 @@
 import json
-import sys
-from collections import defaultdict
 from typing import Any, Dict, List, TypedDict
+
+import pandas as pd
 
 from manifoldpy import api, config
 
@@ -109,3 +109,28 @@ def get_full_markets() -> List[api.Market]:
     update_lite_markets()
     update_bets()
     return load_full_markets()
+
+
+def load_binary_markets_as_df() -> pd.DataFrame:
+    cache = load_cache()
+    first_key = list(cache["lite_markets"].keys())[0]
+    fields = set(cache["lite_markets"][first_key].keys())
+
+    # Unlikely to be useful for analysis
+    fields.remove("creatorAvatarUrl")
+    fields.remove("creatorUsername")
+
+    # Not single values
+    fields.remove("url")
+    fields.remove("pool")
+    fields.remove("tags")
+    o_fields = list(fields)
+
+    rows = [
+        [m[f] for f in o_fields]
+        for m in cache["lite_markets"].values()
+        if m["outcomeType"] == "BINARY"
+    ]
+    df = pd.DataFrame(rows, columns=o_fields)
+    df.rename(columns={"id": "market_id"}, inplace=True)
+    return df
