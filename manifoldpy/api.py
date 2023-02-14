@@ -68,7 +68,7 @@ def _maybe_unstructure(val: Any) -> Any:
     if hasattr(val, "__attrs_attrs__"):
         return weak_unstructure(val)
     elif isinstance(val, list):
-        return [weak_unstructure(v) for v in val]
+        return [_maybe_unstructure(v) for v in val]
     else:
         return val
 

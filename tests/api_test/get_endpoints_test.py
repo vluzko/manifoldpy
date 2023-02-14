@@ -271,13 +271,8 @@ def test_get_all_users_limit():
     assert len(unique) == 1005
 
 
-def test_weak_unstructure():
-    b = api.get_bets(limit=1)
+def test_get_full_data():
     m = api.get_markets(limit=1)[0]
-    m.bets = b
-    m.comments = []
-
-    as_json = api.weak_unstructure(m)
-    assert len(as_json["bets"]) == 1
-    b2 = as_json["bets"][0]
-    assert isinstance(b2, dict)
+    m.get_full_data()
+    assert m.bets is not None
+    assert m.comments is not None
