@@ -181,12 +181,9 @@ def test_free_response_outcomes():
     """Grabs a closed market and checks it
     Could break if the market ever gets deleted.
     """
-    # market: api.FreeResponseMarket = api.get_market("kbCU0NTSe22jMWWwD4i5")  # type: ignore
     market: api.FreeResponseMarket = api.get_slug("after-how-many-unique-traders-will")  # type: ignore
     outcomes, times = market.outcome_history()
-    # import pdb
 
-    # pdb.set_trace()
     assert set(outcomes) == {
         "10",
         "1",
@@ -272,3 +269,15 @@ def test_get_all_users_limit():
     users = api.get_all_users(limit=1005)
     unique = set(x.id for x in users)
     assert len(unique) == 1005
+
+
+def test_weak_unstructure():
+    b = api.get_bets(limit=1)
+    m = api.get_markets(limit=1)[0]
+    m.bets = b
+    m.comments = []
+
+    as_json = api.weak_unstructure(m)
+    assert len(as_json["bets"]) == 1
+    b2 = as_json["bets"][0]
+    assert isinstance(b2, dict)
