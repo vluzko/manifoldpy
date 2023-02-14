@@ -106,17 +106,16 @@ def test_backfill(_monkeypatch):
     assert count_bets(res2) == 20
 
 
-def test_cache_error():
-    problem_bet = "G8p2Td0gdR2TMBb5AXxa"
-    market = api.get_market("will-bitcoin-be-worth-more-than-600")
-    x = api._get_bets(marketId="will-bitcoin-be-worth-more-than-600")
-    y = cache_utils.load_cache()
-    bets = y["bets"]["will-bitcoin-be-worth-more-than-600"]
-    bet = bets[problem_bet]
-    import pdb
+@patch_cache
+def test_build_df(monkeypatch):
+    monkeypatch.setattr(api, "_get_all_markets", make_fake_mkts())
+    monkeypatch.setattr(api, "_get_all_bets", make_fake_bets(100))
+    cache_utils.update_bets()
+    cache_utils.update_lite_markets()
+    df = cache_utils.load_binary_markets_as_df()
 
-    pdb.set_trace()
-    raise NotImplementedError
+    # Honestly this is a nothing test, it's just here to run the code regularly.
+    assert "creatorId" in df.columns
 
 
 @fixture(autouse=True)
