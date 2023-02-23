@@ -93,10 +93,7 @@ def overall_calibration():
     ]
     df, histories = calibration.build_dataframe(binary)  # type: ignore
     # Probabilities at the halfway point
-    starts = np.array([h[0][0] for h in histories])
-    ends = np.array([h[0][-1] for h in histories])
-    midpoints = (starts + ends) * 0.5
-    df["midway"] = calibration.probability_at_time(histories, midpoints)
+    df["midway"] = calibration.probability_at_fraction_completed(histories, 0.5)
 
     yes_markets = df[df["resolution"] == "YES"]
     no_markets = df[df["resolution"] == "NO"]

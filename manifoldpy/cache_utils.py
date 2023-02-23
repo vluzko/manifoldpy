@@ -111,8 +111,7 @@ def get_full_markets() -> List[api.Market]:
     return load_full_markets()
 
 
-def load_binary_markets_as_df() -> pd.DataFrame:
-    cache = load_cache()
+def df_from_cache_dict(cache: Cache) -> pd.DataFrame:
     first_key = list(cache["lite_markets"].keys())[0]
     fields = set(cache["lite_markets"][first_key].keys())
 
@@ -126,11 +125,17 @@ def load_binary_markets_as_df() -> pd.DataFrame:
     fields.remove("tags")
     o_fields = list(fields)
 
-    rows = [
-        [m[f] for f in o_fields]
-        for m in cache["lite_markets"].values()
-        if m["outcomeType"] == "BINARY"
-    ]
+    rows = [[m.get(f) for f in o_fields] for m in cache["lite_markets"].values()]
     df = pd.DataFrame(rows, columns=o_fields)
     df.rename(columns={"id": "market_id"}, inplace=True)
+    return df
+
+
+def load_markets_as_df() -> pd.DataFrame:
+    return df_from_cache_dict(load_cache())
+
+
+def load_binary_markets_as_df() -> pd.DataFrame:
+    df = load_markets_as_df()
+    df = df[df["outcomeType"] == "BINARY"]
     return df
