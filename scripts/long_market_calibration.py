@@ -1,32 +1,6 @@
-from pathlib import Path
-from typing import Optional
-
 import numpy as np
-import pandas as pd
-from matplotlib import pyplot as plt
 
-from manifoldpy import api, cache_utils, calibration
-
-
-def plot_beta_binomial(
-    upper_lower: np.ndarray, means: np.ndarray, decimals
-):  # pragma: no cover
-    _, ax = plt.subplots()
-    num_bins = 10**decimals
-    x_axis = np.arange(0, 1 + 1 / num_bins, 1 / num_bins)
-    ax.scatter(x_axis, means, color="blue")
-    ax.scatter(x_axis, upper_lower[:, 0], color="black", marker="_")  # type: ignore
-    ax.scatter(x_axis, upper_lower[:, 1], color="black", marker="_")  # type: ignore
-    plt.vlines(x_axis, upper_lower[:, 0], upper_lower[:, 1], color="black")
-
-    ax.set_xticks(np.arange(0, 1 + 1 / 10, 1 / 10))
-    ax.set_xlabel("Market probability")
-    ax.set_yticks(np.arange(0, 1 + 1 / 10, 1 / 10))
-    ax.set_ylabel("Beta binomial means and 0.95 intervals")
-
-    l = np.arange(0, x_axis.max(), 0.0001)
-    ax.scatter(l, l, color="green", s=0.01, label="Perfect calibration")
-    plt.show()
+from manifoldpy import cache_utils, calibration
 
 
 def main():
@@ -55,7 +29,7 @@ def main():
     beta_means, beta_intervals = calibration.market_set_accuracy(yes_probs, no_probs)[
         "beta-binomial"
     ]
-    plot_beta_binomial(beta_intervals, beta_means, decimals=1)
+    calibration.plot_beta_binomial(beta_intervals, beta_means, decimals=1)
 
 
 if __name__ == "__main__":

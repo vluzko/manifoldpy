@@ -1,10 +1,11 @@
 """Tools for calculating calibration and other accuracy metrics."""
 import bisect
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
+import scipy
 from matplotlib import pyplot as plt  # type: ignore
 from scipy.stats import beta  # type: ignore
 
@@ -17,6 +18,18 @@ def perfect_calibration(decimals: int) -> np.ndarray:
     t = (p[-2] + 1) / 2
     p[-1] = (t + 1) / 2
     return p
+
+
+def best_possible_beta(actual_beta: np.ndarray, decimals: int) -> np.ndarray:
+    """Compute the best possible beta distribution for the given number of bets"""
+    fraction_true = perfect_calibration(decimals).reshape(-1, 1)
+    total_bets = actual_beta.sum(axis=1).reshape(-1, 1)
+    true = np.round(fraction_true * total_bets)
+    false = total_bets - true
+
+    assert (true + false == total_bets).all()
+
+    return np.concatenate((true, false), axis=1)
 
 
 def extract_binary_probabilities(
@@ -166,9 +179,37 @@ def build_dataframe(
     return df, histories
 
 
+def probability_at_fraction_completed(
+    histories: List[Tuple[np.ndarray, np.ndarray]], fraction: float
+) -> np.ndarray:
+    """Find the probability of each market at the given timepoints.
+
+    Args:
+        histories: A tuple of (timepoints, probabilities) for each market.
+        fraction: The fraction of the market's runtime that has completed. e.g. 0.5 for halfway finished.
+
+    Returns:
+        An array of probabilities. array[i] = probabilities[i] at midpoints[i].
+    """
+    assert 0.0 <= fraction <= 1.0
+    starts: npt.NDArray[np.float64] = np.array([h[0][0] for h in histories])
+    ends: npt.NDArray[np.float64] = np.array([h[0][-1] for h in histories])
+    midpoints = starts + (ends - starts) * fraction
+    return probability_at_time(histories, midpoints)
+
+
 def probability_at_time(
     histories: List[Tuple[np.ndarray, np.ndarray]], midpoints: np.ndarray
 ) -> np.ndarray:
+    """Find the probability of each market at the given timepoints.
+
+    Args:
+        histories: A tuple of (timepoints, probabilities) for each market.
+        midpoints: An array of timepoints for each market.
+
+    Returns:
+        An array of probabilities. array[i] = probabilities[i] at midpoints[i].
+    """
     indices = [bisect.bisect_left(h[0], m) for h, m in zip(histories, midpoints)]  # type: ignore
     # Slower, but probably easier to understand
     probabilities = np.array([h[1][i] for h, i in zip(histories, indices)])
@@ -180,3 +221,64 @@ def markets_by_group(df: pd.DataFrame) -> Dict[str, pd.Series]:
     all_tags = {y for x in df.tags.unique() for y in x}
     filters = {x: df.tags.apply(lambda y: x in y) for x in all_tags}
     return filters
+
+
+def kl_beta(
+    dist_1: npt.NDArray[np.float64], dist_2: npt.NDArray[np.float64]
+) -> np.ndarray:
+    """Calculate KL(dist_1 || dist_2) for each row of dist_1 and dist_2.
+    Formula taken from https://math.stackexchange.com/questions/257821/kullback-liebler-divergence#comment564291_257821
+
+    Args:
+        dist_1: An array of shape [n, 2]. Each row is [alpha, beta] for a beta distribution.
+        dist_2: An array of shape [n, 2]. Each row is [alpha, beta] for a beta distribution.
+
+    Returns:
+        An array of shape [n]. array[i] is the KL divergence between dist_1[i] and dist_2[i].
+    """
+    alpha_1 = dist_1[:, 0]
+    beta_1 = dist_1[:, 1]
+    alpha_2 = dist_2[:, 0]
+    beta_2 = dist_2[:, 1]
+    numer = (
+        scipy.special.gammaln(alpha_1 + beta_1)
+        + scipy.special.gammaln(alpha_2)
+        + scipy.special.gammaln(beta_2)
+    )
+    denom = (
+        scipy.special.gammaln(alpha_2 + beta_2)
+        + scipy.special.gammaln(alpha_1)
+        + scipy.special.gammaln(beta_1)
+    )
+
+    term_1 = numer - denom
+
+    term_2 = (alpha_1 - alpha_2) * (
+        scipy.special.psi(alpha_1) - scipy.special.psi(alpha_1 + beta_1)
+    )
+
+    term_3 = (beta_1 - beta_2) * (
+        scipy.special.psi(beta_1) - scipy.special.psi(alpha_1 + beta_1)
+    )
+    return term_1 + term_2 + term_3
+
+
+def plot_beta_binomial(  # pragma: no cover
+    upper_lower: np.ndarray, means: np.ndarray, decimals
+):
+    _, ax = plt.subplots()
+    num_bins = 10**decimals
+    x_axis = np.arange(0, 1 + 1 / num_bins, 1 / num_bins)
+    ax.scatter(x_axis, means, color="blue")
+    ax.scatter(x_axis, upper_lower[:, 0], color="black", marker="_")  # type: ignore
+    ax.scatter(x_axis, upper_lower[:, 1], color="black", marker="_")  # type: ignore
+    plt.vlines(x_axis, upper_lower[:, 0], upper_lower[:, 1], color="black")
+
+    ax.set_xticks(np.arange(0, 1 + 1 / 10, 1 / 10))
+    ax.set_xlabel("Market probability")
+    ax.set_yticks(np.arange(0, 1 + 1 / 10, 1 / 10))
+    ax.set_ylabel("Beta binomial means and 0.95 intervals")
+
+    l = np.arange(0, x_axis.max(), 0.0001)
+    ax.scatter(l, l, color="green", s=0.01, label="Perfect calibration")
+    plt.show()
