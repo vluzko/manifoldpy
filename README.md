@@ -20,11 +20,10 @@ The package is on PyPI as [`manifoldpy`](https://pypi.org/project/manifoldpy/). 
 ```
 pip install manifoldpy
 ```
-Alternatively, clone this repo and install with pip:
+
+However, you may want to install the most up-to-date version from github instead if you encounter any issues: 
 ```
-git clone https://github.com/vluzko/manifold-markets-python.git
-cd manifold-markets-python
-pip install .
+pip install --upgrade https://github.com/vluzko/manifoldpy/tarball/main
 ```
 
 ## Basic Usage
