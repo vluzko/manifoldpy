@@ -438,7 +438,7 @@ def _get_bets(
     resp.raise_for_status()
 
     unsorted = resp.json()
-    return sorted(unsorted, key=lambda x: x["createdTime"])
+    return sorted(unsorted, key=lambda x: x["createdTime"], reverse=True)
 
 
 def get_bets(
