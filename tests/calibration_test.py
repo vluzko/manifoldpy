@@ -20,6 +20,29 @@ def test_markets():
     return mkts
 
 
+def test_best_possible_beta():
+    actual_beta = np.ones((11, 2))
+    res = calibration.best_possible_beta(actual_beta, 1)
+    assert np.array_equal(
+        res,
+        np.array(
+            [
+                [0, 2],
+                [0, 2],
+                [0, 2],
+                [1, 1],
+                [1, 1],
+                [1, 1],
+                [1, 1],
+                [1, 1],
+                [2, 0],
+                [2, 0],
+                [2, 0],
+            ]
+        ),
+    )
+
+
 def test_brier_score():
     mkt = MockMarket(0.7, "YES")
     brier1 = calibration.brier_score(*calibration.extract_binary_probabilities([mkt]))  # type: ignore
@@ -93,7 +116,7 @@ def test_probability_at_time():
     df, histories = calibration.build_dataframe([market])
     starts = np.array([h[0][0] for h in histories])
     ends = np.array([h[0][-1] for h in histories])
-    midpoints = (starts + ends) * 0.5
+    midpoints = starts + (ends - starts) * 0.5  # type: ignore
     df["midway"] = calibration.probability_at_time(histories, midpoints)
     assert np.isclose(df["midway"][0], 0.222646)
 
@@ -104,3 +127,18 @@ def test_markets_by_group():
     res = calibration.markets_by_group(df)
     for val in res.values():
         assert val.all()
+
+
+def test_probability_at_fraction():
+    market = api.get_full_market("6qEWrk0Af7eWupuSWxQm")
+    df, histories = calibration.build_dataframe([market])
+
+    df["midway"] = calibration.probability_at_fraction_completed(histories, 0.5)
+    assert np.isclose(df["midway"][0], 0.222646)
+
+
+def test_kl_beta():
+    dist_1 = np.ones((5, 2))
+    dist_2 = np.ones((5, 2)) + 2
+    kl = calibration.kl_beta(dist_1, dist_2)
+    assert np.isclose(kl, 0.59880262).all()
