@@ -263,9 +263,9 @@ def kl_beta(
     return term_1 + term_2 + term_3
 
 
-def plot_beta_binomial(  # pragma: no cover
+def plot_beta_binomial(
     upper_lower: np.ndarray, means: np.ndarray, decimals
-):
+):  # pragma: no cover
     _, ax = plt.subplots()
     num_bins = 10**decimals
     x_axis = np.arange(0, 1 + 1 / num_bins, 1 / num_bins)
