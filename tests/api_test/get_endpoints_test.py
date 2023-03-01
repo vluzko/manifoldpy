@@ -9,6 +9,8 @@ from manifoldpy import api
 def test_get_bets():
     bets = api.get_bets(limit=100)
     assert len(bets) == 100
+    for i, bet in enumerate(bets[:-1]):
+        assert bet.createdTime <= bets[i + 1].createdTime
 
 
 def test_get_bets_username():

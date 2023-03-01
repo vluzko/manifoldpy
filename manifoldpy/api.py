@@ -437,7 +437,8 @@ def _get_bets(
     resp = requests.get(BETS_URL, params=params)
     resp.raise_for_status()
 
-    return resp.json()
+    unsorted = resp.json()
+    return sorted(unsorted, key=lambda x: x["createdTime"])
 
 
 def get_bets(
