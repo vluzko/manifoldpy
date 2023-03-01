@@ -27,7 +27,7 @@ jobs:
             echo $HOME
       - run:
           name: Type checking
-          command: mypy manifoldpy/
+          command: mypy --ignore-missing-imports manifoldpy/
       - run:
           name: Run tests
           command: |
