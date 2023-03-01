@@ -133,10 +133,20 @@ class Comment:
     userUsername: str
     userAvatarUrl: str
     userId: str
-    text: str
     createdTime: int
     userName: str
+    content: str
     betId: Optional[str] = None
+    betAmount: Optional[float] = None
+    betOutcome: Optional[Any] = None
+    commenterPositionOutcome: Optional[Any] = None
+    contractSlug: Optional[str] = None
+    replyToCommentId: Optional[str] = None
+    likes: Optional[int] = None
+    contractQuestion: Optional[str] = None
+    commentType: Optional[str] = None
+    commenterPositionShares: Optional[float] = None
+    commenterPositionProb: Optional[float] = None
     answerOutcome: Optional[str] = None
 
 
@@ -541,6 +551,20 @@ def get_all_bets(
     ]
 
 
+def _get_comments(
+    marketId: Optional[str] = None, marketSlug: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """Underlying API call for `get_comments`."""
+    params = {}
+    if marketId is not None:
+        params["contractId"] = marketId
+    if marketSlug is not None:
+        params["contractSlug"] = marketSlug
+    resp = requests.get(COMMENTS_URL, params)
+    resp.raise_for_status()
+    return resp.json()
+
+
 def get_comments(
     marketId: Optional[str] = None, marketSlug: Optional[str] = None
 ) -> List[Comment]:
@@ -550,14 +574,7 @@ def get_comments(
         marketId: Id of the market to get comments for.
         marketSlug: Slug of the market to get comments for.
     """
-    params = {}
-    if marketId is not None:
-        params["contractId"] = marketId
-    if marketSlug is not None:
-        params["contractSlug"] = marketSlug
-    resp = requests.get(COMMENTS_URL, params)
-    resp.raise_for_status()
-    return [weak_structure(x, Comment) for x in resp.json()]
+    return [weak_structure(x, Comment) for x in _get_comments(marketId, marketSlug)]
 
 
 def get_groups() -> List[Group]:
