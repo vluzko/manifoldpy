@@ -38,7 +38,6 @@ SINGLE_MARKET_URL = V0_URL + "market/{}"
 USERNAME_URL = V0_URL + "user/{}"
 USER_ID_URL = V0_URL + "user/by-id/{}"
 USERS_URL = V0_URL + "users"
-COMMENT_URL = V0_URL + "comment"
 
 
 # POST URLs
@@ -49,6 +48,8 @@ ADD_LIQUIDITY_URL = V0_URL + "market/{}/add-liquidity"
 CLOSE_URL = V0_URL + "market/{}/close"
 RESOLVE_MARKET_URL = V0_URL + "market/{}/resolve"
 SELL_SHARES_URL = V0_URL + "market/{}/sell"
+MAKE_COMMENT_URL = V0_URL + "comment"
+
 
 MarketT = TypeVar("MarketT", bound="Market")
 OutcomeType = Literal[
