@@ -38,6 +38,8 @@ SINGLE_MARKET_URL = V0_URL + "market/{}"
 USERNAME_URL = V0_URL + "user/{}"
 USER_ID_URL = V0_URL + "user/by-id/{}"
 USERS_URL = V0_URL + "users"
+COMMENT_URL = V0_URL + "comment"
+
 
 # POST URLs
 MAKE_BET_URL = V0_URL + "bet"
@@ -1111,6 +1113,34 @@ class APIWrapper:
         """
         prepped = self._prep_sell(market_id, outcome, shares=shares)
         return requests.Session().send(prepped)
+    
+    def _prep_make_comment(
+        self,
+        contractId: str,
+        content: str, #The comment to post, formatted as Markdown,
+    ) -> requests.PreparedRequest:
+        """Prepare a comment POST request.
+        See `make_comment` for details.
+        """
+        data = {"contractId": contractId, "markdown": content}
+        req = requests.Request("POST", MAKE_COMMENT_URL, headers=self.headers, json=data)
+        return req.prepare()
+
+    def make_comment(
+        self,
+        contractId: str,
+        content: str, #The comment to post, formatted as Markdown,
+    ) -> requests.Response:
+        """Post a comment.
+        [API reference](https://docs.manifold.markets/api#post-v0comment)
+
+        Args:
+            contractId: The market id.
+            content: The comment to post, formatted as a markdown string.
+        """
+        prepped = self._prep_make_comment(contractId, content)
+        return requests.Session().send(prepped)
+
 
 
 def use_api(f):
