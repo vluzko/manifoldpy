@@ -91,3 +91,16 @@ def test_sell_prepared(wrapper):
     }
 
     assert prepped.body == b'{"outcome": "YES", "shares": 5}'
+
+
+def test_comment_prepared(wrapper):
+    prepped = wrapper._prep_make_comment("1", "Comment")
+    assert prepped.headers == {
+        "Content-Type": "application/json",
+        "Authorization": "Key no_key",
+        "Content-Length": "42",
+    }
+
+    assert prepped.body == b'{"contractId": "1", "markdown": "Comment"}'
+
+
