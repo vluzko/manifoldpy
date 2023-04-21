@@ -282,6 +282,8 @@ class Market:
             cls = MultipleChoiceMarket
         elif json["outcomeType"] == "QUADRATIC_FUNDING":
             cls = QuadraticFundingMarket
+        elif json["outcomeType"] == "STONK":
+            cls = StonkMarket
         else:
             raise ValueError(
                 f'{json["outcomeType"]} isn\'t a known market outcome type. Submit a bug report if the json came from the API.'
@@ -401,6 +403,13 @@ class MultipleChoiceMarket(Market):
 
 @define
 class QuadraticFundingMarket(Market):
+    pass
+
+
+@define
+class StonkMarket(Market):
+    """Don't ask me what they were thinking with this name"""
+
     pass
 
 
@@ -1114,23 +1123,25 @@ class APIWrapper:
         """
         prepped = self._prep_sell(market_id, outcome, shares=shares)
         return requests.Session().send(prepped)
-    
+
     def _prep_make_comment(
         self,
         contractId: str,
-        content: str, #The comment to post, formatted as Markdown,
+        content: str,  # The comment to post, formatted as Markdown,
     ) -> requests.PreparedRequest:
         """Prepare a comment POST request.
         See `make_comment` for details.
         """
         data = {"contractId": contractId, "markdown": content}
-        req = requests.Request("POST", MAKE_COMMENT_URL, headers=self.headers, json=data)
+        req = requests.Request(
+            "POST", MAKE_COMMENT_URL, headers=self.headers, json=data
+        )
         return req.prepare()
 
     def make_comment(
         self,
         contractId: str,
-        content: str, #The comment to post, formatted as Markdown,
+        content: str,  # The comment to post, formatted as Markdown,
     ) -> requests.Response:
         """Post a comment.
         [API reference](https://docs.manifold.markets/api#post-v0comment)
@@ -1141,7 +1152,6 @@ class APIWrapper:
         """
         prepped = self._prep_make_comment(contractId, content)
         return requests.Session().send(prepped)
-
 
 
 def use_api(f):
