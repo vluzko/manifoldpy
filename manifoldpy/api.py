@@ -8,6 +8,7 @@ from typing import (
     Dict,
     List,
     Literal,
+    Mapping,
     Optional,
     Tuple,
     Type,
@@ -133,24 +134,30 @@ class Comment:
 
     id: str
     contractId: str
+    contractQuestion: str
     userUsername: str
     userAvatarUrl: str
     userId: str
     createdTime: int
     userName: str
     content: str
+    commentType: str
+    contractSlug: str
+    visibility: bool
     betId: Optional[str] = None
     betAmount: Optional[float] = None
     betOutcome: Optional[Any] = None
     commenterPositionOutcome: Optional[Any] = None
-    contractSlug: Optional[str] = None
     replyToCommentId: Optional[str] = None
     likes: Optional[int] = None
-    contractQuestion: Optional[str] = None
-    commentType: Optional[str] = None
     commenterPositionShares: Optional[float] = None
     commenterPositionProb: Optional[float] = None
     answerOutcome: Optional[str] = None
+    hiderId: Optional[str] = None
+    hidden: Optional[bool] = None
+    hiddenTime: Optional[int] = None
+    bettorName: Optional[str] = None
+    bettorUsername: Optional[str] = None
 
 
 @define
@@ -213,21 +220,21 @@ class Market:
     outcomeType: OutcomeType
     mechanism: str
     isResolved: bool
+    lastUpdatedTime: int
+    closeTime: int
+    creatorId: str
+    creatorAvatarUrl: str
     resolutionProbability: Optional[float] = field(kw_only=True, default=None)
     p: Optional[float] = field(kw_only=True, default=None)
     totalLiquidity: Optional[float] = field(kw_only=True, default=None)
-    closeTime: Optional[int] = field(kw_only=True, default=None)
-    creatorId: Optional[str] = field(kw_only=True, default=None)
-    lastUpdatedTime: Optional[int] = field(kw_only=True, default=None)
-    creatorAvatarUrl: Optional[str] = field(kw_only=True, default=None)
     resolution: Optional[str] = field(kw_only=True, default=None)
     resolutionTime: Optional[int] = field(kw_only=True, default=None)
     min: Optional[int] = field(kw_only=True, default=None)
     max: Optional[int] = field(kw_only=True, default=None)
     isLogScale: Optional[bool] = field(kw_only=True, default=None)
     # Separating into Lite and Full market types would be pointlessly annoying
-    description: Optional[str] = field(kw_only=True, default=None)
     textDescription: Optional[str] = field(kw_only=True, default=None)
+    description: Optional[dict] = field(kw_only=True, default=None)
     bets: Optional[List[Bet]] = field(kw_only=True, default=None)
     comments: Optional[List[Comment]] = field(kw_only=True, default=None)
 
@@ -269,29 +276,16 @@ class Market:
         if "comments" in json and json["comments"] is not None:
             json["comments"] = [weak_structure(x, Comment) for x in json["comments"]]
 
-        cls: Type["Market"]
-        if json["outcomeType"] == "BINARY":
-            cls = BinaryMarket
-        elif json["outcomeType"] == "FREE_RESPONSE":
-            cls = FreeResponseMarket
-        elif json["outcomeType"] == "NUMERIC":
-            cls = NumericMarket
-        elif json["outcomeType"] == "PSEUDO_NUMERIC":
-            cls = PseudoNumericMarket
-        elif json["outcomeType"] == "MULTIPLE_CHOICE":
-            cls = MultipleChoiceMarket
-        elif json["outcomeType"] == "QUADRATIC_FUNDING":
-            cls = QuadraticFundingMarket
-        elif json["outcomeType"] == "STONK":
-            cls = StonkMarket
-        else:
+        try:
+            cls = MARKET_TYPES_MAP[json["outcomeType"]]
+        except KeyError:
             raise ValueError(
                 f'{json["outcomeType"]} isn\'t a known market outcome type. Submit a bug report if the json came from the API.'
             )
-        market: Market = weak_structure(json, cls)
-        return market
+        return weak_structure(json, cls)
 
 
+# {'totalLiquidity', 'lastUpdatedTime', 'creatorUsername', 'tags', 'creatorId', 'url', 'outcomeType', 'creatorName', 'volume24Hours', 'question', 'volume', 'id', 'p', 'probability', 'creatorAvatarUrl', 'closeTime', 'pool', 'isResolved', 'mechanism', 'createdTime'}
 @define
 class BinaryMarket(Market):
     """A market with a binary resolution
@@ -393,12 +387,13 @@ class NumericMarket(Market):
 
 @define
 class PseudoNumericMarket(Market):
-    pass
+    value: float
+    probability: float
 
 
 @define
 class MultipleChoiceMarket(Market):
-    pass
+    answers: List[dict]
 
 
 @define
@@ -411,6 +406,17 @@ class StonkMarket(Market):
     """Don't ask me what they were thinking with this name"""
 
     pass
+
+
+MARKET_TYPES_MAP: Mapping[str, Type[Market]] = {
+    "BINARY": BinaryMarket,
+    "FREE_RESPONSE": FreeResponseMarket,
+    "NUMERIC": NumericMarket,
+    "PSEUDO_NUMERIC": PseudoNumericMarket,
+    "MULTIPLE_CHOICE": MultipleChoiceMarket,
+    "QUADRATIC_FUNDING": QuadraticFundingMarket,
+    "STONK": StonkMarket,
+}
 
 
 def _get_bets(

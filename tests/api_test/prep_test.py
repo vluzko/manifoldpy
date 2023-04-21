@@ -102,5 +102,3 @@ def test_comment_prepared(wrapper):
     }
 
     assert prepped.body == b'{"contractId": "1", "markdown": "Comment"}'
-
-
