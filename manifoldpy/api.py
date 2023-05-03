@@ -1,10 +1,9 @@
 """API bindings"""
-import pickle
 import sys
+import bisect
 from time import time
 from typing import (
     Any,
-    Callable,
     Dict,
     List,
     Literal,
@@ -13,7 +12,6 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
-    Union,
 )
 
 import numpy as np
@@ -328,14 +326,14 @@ class BinaryMarket(Market):
     def final_probability(self) -> float:
         return self.probability_history()[1][-1]
 
-    def probability_at_time(self, timestamp: int):
+    def probability_at_time(self, timestamp: float):
         times, probs = self.probability_history()
-        if timestamp <= times[0]:
-            raise ValueError("Timestamp before market creation")
-        elif timestamp >= times[-1]:
-            return probs[-1]
+        if timestamp < times[0]:
+            raise ValueError(f"Timestamp {timestamp} before market creation {times[0]}")
         else:
-            raise NotImplementedError
+            index = bisect.bisect(times, timestamp)
+            assert index > 0 # should be caught above
+            return probs[index - 1]
 
 
 @define
