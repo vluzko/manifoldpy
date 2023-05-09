@@ -127,6 +127,11 @@ def test_get_multiple_choice_market():
     assert isinstance(market, api.MultipleChoiceMarket)
 
 
+def test_search_markets():
+    markets = api.search_markets("will")
+    assert len(markets) <= 100
+
+
 def test_get_positions():
     api.get_market_positions("pBPJS5ebbd3QD3RVi8AN")
 
