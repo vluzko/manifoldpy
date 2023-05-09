@@ -161,6 +161,7 @@ class Comment:
     hiddenTime: Optional[int] = None
     bettorName: Optional[str] = None
     bettorUsername: Optional[str] = None
+    editedTime: Optional[int] = None
 
 
 @define
