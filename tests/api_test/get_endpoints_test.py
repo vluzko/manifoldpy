@@ -127,6 +127,17 @@ def test_get_multiple_choice_market():
     assert isinstance(market, api.MultipleChoiceMarket)
 
 
+def test_get_positions():
+    api.get_market_positions("pBPJS5ebbd3QD3RVi8AN")
+
+
+def test_get_user_positions():
+    user_id = "acvO0NAsghTTgGjnsdwt94O44OT2"
+    positions = api.get_market_positions("pBPJS5ebbd3QD3RVi8AN", userId=user_id)
+    for pos in positions:
+        assert pos.userId == user_id
+
+
 def test_id_slug_comparison():
     by_slug = api.get_slug("will-any-model-pass-an-undergrad-pr")
     by_id = api.get_market("Le040Y0ZGkyAYCIEnpA2")

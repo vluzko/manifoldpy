@@ -36,6 +36,7 @@ GROUP_MARKETS_URL = V0_URL + "group/by-id/{group_id}/markets"
 ME_URL = V0_URL + "me"
 MARKET_SLUG_URL = V0_URL + "slug/{}"
 SINGLE_MARKET_URL = V0_URL + "market/{}"
+POSITION_URL = V0_URL + "market/{}/positions"
 USERNAME_URL = V0_URL + "user/{}"
 USER_ID_URL = V0_URL + "user/by-id/{}"
 USERS_URL = V0_URL + "users"
@@ -408,6 +409,34 @@ class StonkMarket(Market):
     pass
 
 
+@define
+class ContractMetric:
+    contractId: str
+    from_dict: dict
+    hasNoShares: bool
+    hasShares: bool
+    hasYesShares: bool
+    invested: float
+    loan: float
+    maxSharesOutcome: Optional[str]
+    payout: float
+    profit: float
+    profitPercent: float
+    totalShares: dict
+    userId: str
+    userUsername: str
+    userName: str
+    userAvatarUrl: str
+    lastBetTime: float
+
+    @classmethod
+    def from_json(cls, json_dict: dict) -> "ContractMetric":
+        if "from" in json_dict:
+            json_dict["from_dict"] = json_dict["from"]
+            del json_dict["from"]
+        return weak_structure(json_dict, cls)
+
+
 MARKET_TYPES_MAP: Mapping[str, Type[Market]] = {
     "BINARY": BinaryMarket,
     "FREE_RESPONSE": FreeResponseMarket,
@@ -635,6 +664,19 @@ def get_market(market_id: str) -> Market:
     resp = requests.get(SINGLE_MARKET_URL.format(market_id), timeout=20)
     resp.raise_for_status()
     return Market.from_json(resp.json())
+
+
+def get_market_positions(
+    market_id: str,
+    order: Optional[str] = None,
+    top: Optional[int] = None,
+    bottom: Optional[int] = None,
+    userId: Optional[str] = None,
+) -> List[ContractMetric]:
+    params = {"order": order, "top": top, "bottom": bottom, "userId": userId}
+    resp = requests.get(POSITION_URL.format(market_id), timeout=20, params=params)
+    resp.raise_for_status()
+    return [ContractMetric.from_json(x) for x in resp.json()]
 
 
 def get_full_market(market_id: str) -> Market:
