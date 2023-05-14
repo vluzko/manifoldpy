@@ -15,6 +15,8 @@ from typing import (
 )
 
 import numpy as np
+import numpy.typing as npt
+
 import requests
 from attr import define, field
 
@@ -304,12 +306,14 @@ class BinaryMarket(Market):
             unique_traders = {b.userId for b in self.bets}
             return len(unique_traders)
 
-    def probability_history(self) -> Tuple[np.ndarray, np.ndarray]:
+    def probability_history(
+        self,
+    ) -> Tuple[npt.NDArray[np.int_], npt.NDArray[np.float_]]:
         assert (
             self.bets is not None
         ), "Call get_market before accessing probability history"
-        times: np.ndarray
-        probabilities: np.ndarray
+        times: npt.NDArray[np.int_]
+        probabilities: npt.NDArray[np.float_]
         if len(self.bets) == 0:
             times, probabilities = np.array([self.createdTime]), np.array(
                 [self.probability]
@@ -336,7 +340,7 @@ class BinaryMarket(Market):
             raise ValueError(f"Timestamp {timestamp} before market creation {times[0]}")
         else:
             index = bisect.bisect(times, timestamp)
-            assert index > 0 # should be caught above
+            assert index > 0  # should be caught above
             return probs[index - 1]
 
 
