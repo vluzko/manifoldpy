@@ -25,6 +25,7 @@ V0_URL = "https://manifold.markets/api/v0/"
 # GET URLs
 
 ALL_MARKETS_URL = V0_URL + "markets"
+SEARCH_MARKETS_URL = V0_URL + "search-markets"
 BETS_URL = V0_URL + "bets"
 COMMENTS_URL = V0_URL + "comments"
 GROUPS_URL = V0_URL + "groups"
@@ -34,6 +35,7 @@ GROUP_MARKETS_URL = V0_URL + "group/by-id/{group_id}/markets"
 ME_URL = V0_URL + "me"
 MARKET_SLUG_URL = V0_URL + "slug/{}"
 SINGLE_MARKET_URL = V0_URL + "market/{}"
+POSITION_URL = V0_URL + "market/{}/positions"
 USERNAME_URL = V0_URL + "user/{}"
 USER_ID_URL = V0_URL + "user/by-id/{}"
 USERS_URL = V0_URL + "users"
@@ -54,6 +56,7 @@ MarketT = TypeVar("MarketT", bound="Market")
 OutcomeType = Literal[
     "BINARY", "FREE_RESPONSE", "PSEUDO_NUMERIC", "MULTIPLE_CHOICE", "NUMERIC"
 ]
+OrderType = Literal["shares", "profit"]
 Visibility = Literal["public", "unlisted"]
 T = TypeVar("T")
 
@@ -156,6 +159,7 @@ class Comment:
     hiddenTime: Optional[int] = None
     bettorName: Optional[str] = None
     bettorUsername: Optional[str] = None
+    editedTime: Optional[int] = None
 
 
 @define
@@ -406,6 +410,34 @@ class StonkMarket(Market):
     pass
 
 
+@define
+class ContractMetric:
+    contractId: str
+    from_dict: dict
+    hasNoShares: bool
+    hasShares: bool
+    hasYesShares: bool
+    invested: float
+    loan: float
+    maxSharesOutcome: Optional[str]
+    payout: float
+    profit: float
+    profitPercent: float
+    totalShares: dict
+    userId: str
+    userUsername: str
+    userName: str
+    userAvatarUrl: str
+    lastBetTime: float
+
+    @classmethod
+    def from_json(cls, json_dict: dict) -> "ContractMetric":
+        if "from" in json_dict:
+            json_dict["from_dict"] = json_dict["from"]
+            del json_dict["from"]
+        return weak_structure(json_dict, cls)
+
+
 MARKET_TYPES_MAP: Mapping[str, Type[Market]] = {
     "BINARY": BinaryMarket,
     "FREE_RESPONSE": FreeResponseMarket,
@@ -635,6 +667,28 @@ def get_market(market_id: str) -> Market:
     return Market.from_json(resp.json())
 
 
+def get_market_positions(
+    market_id: str,
+    order: Optional[OrderType] = None,
+    top: Optional[int] = None,
+    bottom: Optional[int] = None,
+    userId: Optional[str] = None,
+) -> List[ContractMetric]:
+    """Get the positions on a single market.
+
+    Args:
+        market_id: ID of the market to get.
+        order: The ordering for results. Can be either "profit" or "shares".
+        top: The number of top positions (ordered by order) to return.
+        bottom: The number of bottom positions (ordered by order) to return.
+        userId: The user ID to query by. Default: null. If provided, only the position for this user will be returned.
+    """
+    params = {"order": order, "top": top, "bottom": bottom, "userId": userId}
+    resp = requests.get(POSITION_URL.format(market_id), timeout=20, params=params)
+    resp.raise_for_status()
+    return [ContractMetric.from_json(x) for x in resp.json()]
+
+
 def get_full_market(market_id: str) -> Market:
     """Get a single full market.
     Will include bets and comments
@@ -725,6 +779,19 @@ def get_all_markets(after: int = 0, limit: int = sys.maxsize) -> List[Market]:
         limit: The maximum number of markets to retrieve.
     """
     return [Market.from_json(x) for x in _get_all_markets(after=after, limit=limit)]
+
+
+def search_markets(terms: List[str]) -> List[Market]:
+    """Search markets by terms.
+    Returns at most 100 markets.
+    Args:
+        terms: A list of search terms. Must not contain spaces.
+    """
+    joined_terms = " ".join(terms)
+    params: Dict[str, Any] = {"terms": joined_terms}
+    resp = requests.get(SEARCH_MARKETS_URL, params=params)
+    resp.raise_for_status()
+    return [Market.from_json(x) for x in resp.json()]
 
 
 def get_slug(slug: str) -> Market:
