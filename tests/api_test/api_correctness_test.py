@@ -4,6 +4,8 @@ from api_test import SKIP_LONG
 
 from manifoldpy import api
 
+import pytest
+
 
 @SKIP_LONG
 def test_mechanisms():
@@ -17,6 +19,21 @@ def test_comment_correctness_small():
     expected_keys = {x.name for x in api.Comment.__attrs_attrs__}  # type: ignore
     actual_keys = {y for x in json for y in x}
     assert actual_keys.issubset(expected_keys)
+
+
+def test_probability_at_time() -> None:
+    market = api.get_full_market("pBPJS5ebbd3QD3RVi8AN")
+    assert isinstance(market, api.BinaryMarket)
+    with pytest.raises(ValueError):
+        assert market.probability_at_time(0)
+    with pytest.raises(ValueError):
+        assert market.probability_at_time(1660753976383)
+    # Market creation
+    assert market.probability_at_time(1660753976384) == pytest.approx(0.5, abs=1e-4)
+    # Oct 22 2022
+    assert market.probability_at_time(1666421235253) == pytest.approx(0.4184, abs=1e-4)
+    # After market close
+    assert market.probability_at_time(1683153271736) == pytest.approx(0.93, abs=1e-4)
 
 
 def test_comment_correctness_large():

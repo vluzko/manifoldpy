@@ -1,10 +1,9 @@
 """API bindings"""
-import pickle
 import sys
+import bisect
 from time import time
 from typing import (
     Any,
-    Callable,
     Dict,
     List,
     Literal,
@@ -13,10 +12,11 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
-    Union,
 )
 
 import numpy as np
+import numpy.typing as npt
+
 import requests
 from attr import define, field
 
@@ -306,12 +306,14 @@ class BinaryMarket(Market):
             unique_traders = {b.userId for b in self.bets}
             return len(unique_traders)
 
-    def probability_history(self) -> Tuple[np.ndarray, np.ndarray]:
+    def probability_history(
+        self,
+    ) -> Tuple[npt.NDArray[np.int_], npt.NDArray[np.float_]]:
         assert (
             self.bets is not None
         ), "Call get_market before accessing probability history"
-        times: np.ndarray
-        probabilities: np.ndarray
+        times: npt.NDArray[np.int_]
+        probabilities: npt.NDArray[np.float_]
         if len(self.bets) == 0:
             times, probabilities = np.array([self.createdTime]), np.array(
                 [self.probability]
@@ -332,14 +334,14 @@ class BinaryMarket(Market):
     def final_probability(self) -> float:
         return self.probability_history()[1][-1]
 
-    def probability_at_time(self, timestamp: int):
+    def probability_at_time(self, timestamp: float):
         times, probs = self.probability_history()
-        if timestamp <= times[0]:
-            raise ValueError("Timestamp before market creation")
-        elif timestamp >= times[-1]:
-            return probs[-1]
+        if timestamp < times[0]:
+            raise ValueError(f"Timestamp {timestamp} before market creation {times[0]}")
         else:
-            raise NotImplementedError
+            index = bisect.bisect(times, timestamp)
+            assert index > 0  # should be caught above
+            return probs[index - 1]
 
 
 @define
