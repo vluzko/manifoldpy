@@ -166,8 +166,8 @@ def build_dataframe(
     Returns:
         Tuple[pd.DataFrame, Tuple[np.ndarray, np.ndarray]]: The dataframe, and a list of betting histories for every market.
     """
-    columns = ["id", "num_trades", "resolution", "volume", "tags"]
-    simple_fields = [(x.id, len(x.bets), x.resolution, x.volume, tuple(y.lower() for y in x.tags)) for x in markets]  # type: ignore
+    columns = ["id", "num_trades", "resolution", "volume"]
+    simple_fields = [(x.id, len(x.bets), x.resolution, x.volume) for x in markets]  # type: ignore
     df = pd.DataFrame(simple_fields, columns=columns)
 
     histories = [x.probability_history() for x in markets]
@@ -218,6 +218,9 @@ def probability_at_time(
 
 def markets_by_group(df: pd.DataFrame) -> Dict[str, pd.Series]:
     """Get a dict group -> group's markets"""
+    raise NotImplementedError(
+        "API update removed tags, grouping markets is no longer supported."
+    )
     all_tags = {y for x in df.tags.unique() for y in x}
     filters = {x: df.tags.apply(lambda y: x in y) for x in all_tags}
     return filters

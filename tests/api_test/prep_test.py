@@ -48,7 +48,6 @@ def test_create_market_prepared(wrapper):
         "Test question",
         "Some elaboration.",
         1659896688,
-        tags=None,
         initialProb=50,
     )
     assert prepped.headers == {

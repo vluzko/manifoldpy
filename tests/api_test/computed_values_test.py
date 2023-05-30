@@ -13,7 +13,6 @@ def lite_mkt():
             "creatorName": "Test Name",
             "createdTime": 0,
             "question": "Will this test pass",
-            "tags": [],
             "url": "none",
             "pool": {"NO": 38.461538461538474, "YES": 65},
             "volume": 15,
