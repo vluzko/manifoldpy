@@ -122,7 +122,6 @@ def df_from_cache_dict(cache: Cache) -> pd.DataFrame:
     # Not single values
     fields.remove("url")
     fields.remove("pool")
-    fields.remove("tags")
     o_fields = list(fields)
 
     rows = [[m.get(f) for f in o_fields] for m in cache["lite_markets"].values()]

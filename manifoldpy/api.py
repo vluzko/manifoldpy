@@ -1,22 +1,11 @@
 """API bindings"""
-import sys
 import bisect
+import sys
 from time import time
-from typing import (
-    Any,
-    Dict,
-    List,
-    Literal,
-    Mapping,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-)
+from typing import Any, Dict, List, Literal, Mapping, Optional, Tuple, Type, TypeVar
 
 import numpy as np
 import numpy.typing as npt
-
 import requests
 from attr import define, field
 
@@ -147,6 +136,7 @@ class Comment:
     commentType: str
     contractSlug: str
     visibility: bool
+    isApi: bool
     betId: Optional[str] = None
     betAmount: Optional[float] = None
     betOutcome: Optional[Any] = None
@@ -216,7 +206,6 @@ class Market:
     creatorName: str
     createdTime: int
     question: str
-    tags: List[str]
     url: str
     pool: Dict[str, float]
     volume: float
@@ -289,13 +278,9 @@ class Market:
         return weak_structure(json, cls)
 
 
-# {'totalLiquidity', 'lastUpdatedTime', 'creatorUsername', 'tags', 'creatorId', 'url', 'outcomeType', 'creatorName', 'volume24Hours', 'question', 'volume', 'id', 'p', 'probability', 'creatorAvatarUrl', 'closeTime', 'pool', 'isResolved', 'mechanism', 'createdTime'}
 @define
 class BinaryMarket(Market):
-    """A market with a binary resolution
-    Attributes:
-        probability: The current resolution probability
-    """
+    """A market with a binary resolution"""
 
     probability: float
 
@@ -700,9 +685,6 @@ def get_full_market(market_id: str) -> Market:
     Args:
         market_id: ID of the market to fetch.
     """
-    # resp = requests.get(SINGLE_MARKET_URL.format(market_id), timeout=20)
-    # resp.raise_for_status()
-    # market = Market.from_json(resp.json())
     market = get_market(market_id)
     market.bets = get_bets(marketId=market_id, limit=None)
     market.comments = get_comments(marketId=market_id)
@@ -988,7 +970,6 @@ class APIWrapper:
         question: str,
         description: str,
         closeTime: int,
-        tags: Optional[List[str]] = None,
         initialProb: Optional[int] = None,
         min: Optional[float] = None,
         max: Optional[float] = None,
@@ -1020,8 +1001,6 @@ class APIWrapper:
             },
             "closeTime": closeTime,
         }
-        if tags is not None:
-            data["tags"] = tags
 
         if groupId is not None:
             data["groupId"] = groupId
@@ -1059,7 +1038,6 @@ class APIWrapper:
         question: str,
         description: str,
         closeTime: int,
-        tags: Optional[List[str]] = None,
         initialProb: Optional[int] = None,
         min: Optional[float] = None,
         max: Optional[float] = None,
@@ -1077,7 +1055,6 @@ class APIWrapper:
             question:       Short description of the market.
             description:    Additional details about the market.
             closeTime:      When the market closes (milliseconds since epoch).
-            tags:           Any tags for the market.
             initialProb:    The initial probability for the market. Must be between 1 and 99. Used for BINARY markets.
             min:            Minimum value the market can resolve to. Used for PSEUDO_NUMERIC markets.
             max:            Maximum value the market can resolve to. Used for PSEUDO_NUMERIC markets.
@@ -1092,7 +1069,6 @@ class APIWrapper:
             question,
             description,
             closeTime,
-            tags=tags,
             initialProb=initialProb,
             min=min,
             max=max,
@@ -1259,7 +1235,6 @@ def create_market(
     question: str,
     description: str,
     closeTime: int,
-    tags: Optional[List[str]] = None,
     initialProb: Optional[int] = None,
     min: Optional[float] = None,
     max: Optional[float] = None,

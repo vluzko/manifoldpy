@@ -108,7 +108,7 @@ def test_market_set_accuracy(test_markets):
 def test_build_df():
     market = api.get_full_market("6qEWrk0Af7eWupuSWxQm")
     df, _ = calibration.build_dataframe([market])
-    assert df.tags[0] == ("twitter", "elon", "technology")
+    assert df.iloc[0]["id"] == "6qEWrk0Af7eWupuSWxQm"
 
 
 def test_probability_at_time():
@@ -119,14 +119,6 @@ def test_probability_at_time():
     midpoints = starts + (ends - starts) * 0.5  # type: ignore
     df["midway"] = calibration.probability_at_time(histories, midpoints)
     assert np.isclose(df["midway"][0], 0.222646)
-
-
-def test_markets_by_group():
-    market = api.get_full_market("6qEWrk0Af7eWupuSWxQm")
-    df, histories = calibration.build_dataframe([market])
-    res = calibration.markets_by_group(df)
-    for val in res.values():
-        assert val.all()
 
 
 def test_probability_at_fraction():
