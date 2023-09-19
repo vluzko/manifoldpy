@@ -49,6 +49,7 @@ def test_get_comments_slug():
     assert len(comments) == 6
 
 
+@pytest.mark.skip(reason="This endpoint breaks upstream.")
 def test_get_groups():
     groups = api.get_groups()
     assert len(groups) >= 480
@@ -127,8 +128,13 @@ def test_get_multiple_choice_market():
     assert isinstance(market, api.MultipleChoiceMarket)
 
 
+def test_get_bountied_market():
+    market = api.get_market("ofhEyRqeO8AXY6SNteOO")
+    assert isinstance(market, api.BountiedMarket)
+
+
 def test_search_markets():
-    markets = api.search_markets("will")
+    markets = api.search_markets(["will"])
     assert len(markets) <= 100
 
 

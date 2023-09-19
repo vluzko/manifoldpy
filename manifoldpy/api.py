@@ -125,6 +125,7 @@ class Comment:
     """A comment on a market"""
 
     id: str
+    commentId: str
     contractId: str
     contractQuestion: str
     userUsername: str
@@ -152,6 +153,9 @@ class Comment:
     bettorName: Optional[str] = None
     bettorUsername: Optional[str] = None
     editedTime: Optional[int] = None
+    betAnswerId: Optional[str] = None
+    commenterPositionAnswerId: Optional[str] = None
+    bountyAwarded: Optional[bool] = None
 
 
 @define
@@ -272,8 +276,9 @@ class Market:
         try:
             cls = MARKET_TYPES_MAP[json["outcomeType"]]
         except KeyError:
+            market_id = json["id"]
             raise ValueError(
-                f'{json["outcomeType"]} isn\'t a known market outcome type. Submit a bug report if the json came from the API.'
+                f'{json["outcomeType"]} isn\'t a known market outcome type. Submit a bug report for market ID {market_id}.'
             )
         return weak_structure(json, cls)
 
@@ -400,6 +405,16 @@ class StonkMarket(Market):
 
 
 @define
+class Poll(Market):
+    pass
+
+
+@define
+class BountiedMarket(Market):
+    pass
+
+
+@define
 class ContractMetric:
     contractId: str
     from_dict: dict
@@ -435,6 +450,8 @@ MARKET_TYPES_MAP: Mapping[str, Type[Market]] = {
     "MULTIPLE_CHOICE": MultipleChoiceMarket,
     "QUADRATIC_FUNDING": QuadraticFundingMarket,
     "STONK": StonkMarket,
+    "POLL": Poll,
+    "BOUNTIED_QUESTION": BountiedMarket,
 }
 
 

@@ -1,6 +1,7 @@
 """Tools for calculating calibration and other accuracy metrics."""
 import bisect
-from typing import Any, Dict, List, Tuple
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import numpy.typing as npt
@@ -267,7 +268,10 @@ def kl_beta(
 
 
 def plot_beta_binomial(
-    upper_lower: np.ndarray, means: np.ndarray, decimals
+    upper_lower: np.ndarray,
+    means: np.ndarray,
+    decimals: int,
+    path: Optional[Path] = None,
 ):  # pragma: no cover
     _, ax = plt.subplots()
     num_bins = 10**decimals
@@ -282,6 +286,30 @@ def plot_beta_binomial(
     ax.set_yticks(np.arange(0, 1 + 1 / 10, 1 / 10))
     ax.set_ylabel("Beta binomial means and 0.95 intervals")
 
-    l = np.arange(0, x_axis.max(), 0.0001)
+    l = np.arange(0, x_axis.max(), 0.00001)
     ax.scatter(l, l, color="green", s=0.01, label="Perfect calibration")
-    plt.show()
+    if path is None:
+        plt.show()
+    else:
+        plt.savefig(path)
+
+
+def plot_calibration(
+    c_table: np.ndarray, bins: np.ndarray, path: Optional[Path] = None
+):  # pragma: no cover
+    _, ax = plt.subplots()
+    ax.scatter(bins, c_table, color="cyan", label="Market calibration")
+    # Perfect calibration line
+    l = np.arange(0, bins.max(), 0.00001)
+    ax.scatter(l, l, color="green", s=0.01, label="Perfect calibration")
+
+    ax.set_xticks(np.arange(0, 1 + 1 / 10, 1 / 10))
+    ax.set_xlabel("Market probability")
+    ax.set_yticks(np.arange(0, 1 + 1 / 10, 1 / 10))
+    ax.set_ylabel("Empirical probability")
+    ax.legend()
+
+    if path is None:
+        plt.show()
+    else:
+        plt.savefig(path)

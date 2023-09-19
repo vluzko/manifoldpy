@@ -7,7 +7,6 @@ from manifoldpy import api, config
 
 
 class Cache(TypedDict):
-
     latest_market: int
     latest_bet: int
     lite_markets: Dict[str, Dict[str, Any]]
