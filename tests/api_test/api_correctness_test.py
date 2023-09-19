@@ -18,7 +18,9 @@ def test_comment_correctness_small():
     json = api._get_comments(marketId="pBPJS5ebbd3QD3RVi8AN")
     expected_keys = {x.name for x in api.Comment.__attrs_attrs__}  # type: ignore
     actual_keys = {y for x in json for y in x}
-    assert actual_keys.issubset(expected_keys)
+    assert actual_keys.issubset(
+        expected_keys
+    ), f"Extra keys: {actual_keys - expected_keys}"
 
 
 def test_probability_at_time() -> None:
@@ -43,7 +45,9 @@ def test_comment_correctness_large():
     for market in markets:
         json = api._get_comments(marketId=market.id)
         actual_keys = {y for x in json for y in x}
-        assert actual_keys.issubset(expected_keys)
+        assert actual_keys.issubset(
+            expected_keys
+        ), f"Extra keys: {actual_keys - expected_keys}"
         if len(json) > 0:
             always_present &= actual_keys
     print(f"Always present keys: {always_present}")

@@ -91,7 +91,6 @@ def test_beta_binomial_calibration():
 
 
 def test_perfect_calibration():
-
     assert np.isclose(
         calibration.perfect_calibration(1),
         np.array([0.025, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.975]),
@@ -99,7 +98,6 @@ def test_perfect_calibration():
 
 
 def test_market_set_accuracy(test_markets):
-
     res = calibration.market_set_accuracy(*calibration.extract_binary_probabilities(test_markets))  # type: ignore
     assert np.isclose(res["10% calibration"][7], 0.66666)
     assert np.isclose(res["Brier score"], 0.22333333)
