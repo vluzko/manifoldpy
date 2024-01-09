@@ -39,7 +39,7 @@ def test_cancel_prepared(wrapper):
         "Content-Length": "0",
     }
     assert prepped.body == None
-    assert prepped.url == "https://manifold.markets/api/v0/bet/cancel/2"
+    assert prepped.url == "https://api.manifold.markets/v0/bet/cancel/2"
 
 
 def test_create_market_prepared(wrapper):
@@ -68,7 +68,7 @@ def test_me_prepared(wrapper):
         "Authorization": "Key no_key",
     }
     assert prepped.body == None
-    assert prepped.url == "https://manifold.markets/api/v0/me"
+    assert prepped.url == "https://api.manifold.markets/v0/me"
 
 
 def test_resolve_market_prepared(wrapper):
