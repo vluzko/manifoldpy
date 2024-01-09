@@ -791,7 +791,7 @@ def search_markets(terms: List[str]) -> List[Market]:
         terms: A list of search terms. Must not contain spaces.
     """
     joined_terms = " ".join(terms)
-    params: Dict[str, Any] = {"terms": joined_terms}
+    params: Dict[str, Any] = {"term": joined_terms}
     resp = requests.get(SEARCH_MARKETS_URL, params=params)
     resp.raise_for_status()
     return [Market.from_json(x) for x in resp.json()]
