@@ -156,6 +156,10 @@ class Comment:
     betAnswerId: Optional[str] = None
     commenterPositionAnswerId: Optional[str] = None
     bountyAwarded: Optional[bool] = None
+    commenterPositionProb: Optional[float] = None
+    commenterPositionShares: Optional[float] = None
+    commenterPositionOutcome: Optional[str] = None
+    betReplyAmountsByOutcome: Optional[Dict[str, int]] = None
 
 
 @define
