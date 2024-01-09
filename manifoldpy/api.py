@@ -156,9 +156,6 @@ class Comment:
     betAnswerId: Optional[str] = None
     commenterPositionAnswerId: Optional[str] = None
     bountyAwarded: Optional[bool] = None
-    commenterPositionProb: Optional[float] = None
-    commenterPositionShares: Optional[float] = None
-    commenterPositionOutcome: Optional[str] = None
     betReplyAmountsByOutcome: Optional[Dict[str, int]] = None
 
 
@@ -215,6 +212,7 @@ class Market:
     createdTime: int
     question: str
     url: str
+    slug: str
     pool: Dict[str, float]
     volume: float
     volume24Hours: float
@@ -225,11 +223,15 @@ class Market:
     closeTime: int
     creatorId: str
     creatorAvatarUrl: str
+    uniqueBettorCount: int
     resolutionProbability: Optional[float] = field(kw_only=True, default=None)
+    resolverId: Optional[str] = field(kw_only=True, default=None)
     p: Optional[float] = field(kw_only=True, default=None)
     totalLiquidity: Optional[float] = field(kw_only=True, default=None)
     resolution: Optional[str] = field(kw_only=True, default=None)
     resolutionTime: Optional[int] = field(kw_only=True, default=None)
+    lastBetTime: Optional[float] = field(kw_only=True, default=None)
+    lastCommentTime: Optional[int] = field(kw_only=True, default=None)
     min: Optional[int] = field(kw_only=True, default=None)
     max: Optional[int] = field(kw_only=True, default=None)
     isLogScale: Optional[bool] = field(kw_only=True, default=None)
@@ -238,10 +240,10 @@ class Market:
     description: Optional[dict] = field(kw_only=True, default=None)
     bets: Optional[List[Bet]] = field(kw_only=True, default=None)
     comments: Optional[List[Comment]] = field(kw_only=True, default=None)
-
+    
     @property
     def slug(self) -> str:
-        return self.url.split("/")[-1]
+        return self._slug
 
     def get_full_data(self) -> "Market":
         self.bets = get_bets(marketId=self.id)

@@ -70,7 +70,7 @@ def check_markets(market_name: str, markets: List[dict], expected_keys: Set[str]
     sometimes_present = set()
     for market in markets:
         actual_keys = set(market)
-        assert actual_keys.issubset(expected_keys)
+        assert actual_keys.issubset(expected_keys), f"Extra keys: {actual_keys - expected_keys}"
 
         always_present &= actual_keys
         never_present -= actual_keys
