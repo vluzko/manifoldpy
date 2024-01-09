@@ -11,7 +11,7 @@ from attr import define, field
 
 from manifoldpy import config
 
-V0_URL = "https://manifold.markets/api/v0/"
+V0_URL = "https://api.manifold.markets/v0/"
 
 # GET URLs
 
