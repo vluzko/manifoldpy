@@ -241,10 +241,6 @@ class Market:
     bets: Optional[List[Bet]] = field(kw_only=True, default=None)
     comments: Optional[List[Comment]] = field(kw_only=True, default=None)
     
-    @property
-    def slug(self) -> str:
-        return self._slug
-
     def get_full_data(self) -> "Market":
         self.bets = get_bets(marketId=self.id)
         self.comments = get_comments(marketId=self.id)
