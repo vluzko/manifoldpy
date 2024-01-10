@@ -11,6 +11,7 @@ def lite_mkt():
             "id": "none",
             "creatorUsername": "TestUserName",
             "creatorName": "Test Name",
+            'slug': 'will-this-test-pass'
             "createdTime": 0,
             "question": "Will this test pass",
             "url": "none",
@@ -26,6 +27,7 @@ def lite_mkt():
             "creatorAvatarUrl": "none",
             "p": 0.5,
             "totalLiquidity": 50,
+            'uniqueBettorCount': 0,
             "probability": 0.3717472118959108,
         }
     )

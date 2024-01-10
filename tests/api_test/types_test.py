@@ -1,4 +1,5 @@
 from manifoldpy import api
+import json
 
 
 def test_weak_unstructure():
@@ -9,8 +10,10 @@ def test_weak_unstructure():
         "createdTime": 1649943317395,
         "question": "Will Elon Musk own more than 90% of Twitter before June 1st?",
         "url": "https://manifold.markets/ampdot/will-elon-musk-own-more-than-90-of",
+        "slug": "will-elon-musk-own-more-than-90-of"
         "pool": {"NO": 22.406104954208892, "YES": 1322.035893303773},
         "volume": 3227.934376240527,
+        "uniqueBettorCount": 32,
         "volume24Hours": 0,
         "outcomeType": "BINARY",
         "mechanism": "cpmm-1",
@@ -58,8 +61,10 @@ def test_weak_structure():
         "createdTime": 1649943317395,
         "question": "Will Elon Musk own more than 90% of Twitter before June 1st?",
         "url": "https://manifold.markets/ampdot/will-elon-musk-own-more-than-90-of",
+        "slug": "will-elon-musk-own-more-than-90-of"
         "pool": {"NO": 22.406104954208892, "YES": 1322.035893303773},
         "volume": 3227.934376240527,
+        "uniqueBettorCount": 32,
         "volume24Hours": 0,
         "outcomeType": "BINARY",
         "mechanism": "cpmm-1",
