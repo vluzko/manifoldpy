@@ -11,7 +11,7 @@ def lite_mkt():
             "id": "none",
             "creatorUsername": "TestUserName",
             "creatorName": "Test Name",
-            'slug': 'will-this-test-pass'
+            'slug': 'will-this-test-pass',
             "createdTime": 0,
             "question": "Will this test pass",
             "url": "none",
