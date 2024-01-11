@@ -11,7 +11,7 @@ import pytest
 def test_mechanisms():
     markets = api.get_all_markets()
     all_mechanisms = {x.mechanism for x in markets}
-    assert all_mechanisms <= {"cpmm-1", "dpm-2"}
+    assert all_mechanisms <= {'cpmm-1', 'cpmm-2', 'cpmm-multi-1', 'dpm-2', 'none', 'qf'}
 
 
 def test_comment_correctness_small():

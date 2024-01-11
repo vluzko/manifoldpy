@@ -35,6 +35,9 @@ def test_weak_unstructure():
         "probability": 0.014263247555638422,
         "bets": None,
         "comments": None,
+        'lastBetTime': None, 
+        'lastCommentTime': None,
+        'resolverId': None
     }
     m = api.Market.from_json(json_dict)
     recon_json = api.weak_unstructure(m)
