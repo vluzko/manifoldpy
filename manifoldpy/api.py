@@ -11,7 +11,7 @@ from attr import define, field
 
 from manifoldpy import config
 
-V0_URL = "https://manifold.markets/api/v0/"
+V0_URL = "https://api.manifold.markets/v0/"
 
 # GET URLs
 
@@ -156,6 +156,7 @@ class Comment:
     betAnswerId: Optional[str] = None
     commenterPositionAnswerId: Optional[str] = None
     bountyAwarded: Optional[bool] = None
+    betReplyAmountsByOutcome: Optional[Dict[str, int]] = None
 
 
 @define
@@ -211,6 +212,7 @@ class Market:
     createdTime: int
     question: str
     url: str
+    slug: str
     pool: Dict[str, float]
     volume: float
     volume24Hours: float
@@ -221,11 +223,15 @@ class Market:
     closeTime: int
     creatorId: str
     creatorAvatarUrl: str
+    uniqueBettorCount: int
     resolutionProbability: Optional[float] = field(kw_only=True, default=None)
+    resolverId: Optional[str] = field(kw_only=True, default=None)
     p: Optional[float] = field(kw_only=True, default=None)
     totalLiquidity: Optional[float] = field(kw_only=True, default=None)
     resolution: Optional[str] = field(kw_only=True, default=None)
     resolutionTime: Optional[int] = field(kw_only=True, default=None)
+    lastBetTime: Optional[float] = field(kw_only=True, default=None)
+    lastCommentTime: Optional[int] = field(kw_only=True, default=None)
     min: Optional[int] = field(kw_only=True, default=None)
     max: Optional[int] = field(kw_only=True, default=None)
     isLogScale: Optional[bool] = field(kw_only=True, default=None)
@@ -234,11 +240,7 @@ class Market:
     description: Optional[dict] = field(kw_only=True, default=None)
     bets: Optional[List[Bet]] = field(kw_only=True, default=None)
     comments: Optional[List[Comment]] = field(kw_only=True, default=None)
-
-    @property
-    def slug(self) -> str:
-        return self.url.split("/")[-1]
-
+    
     def get_full_data(self) -> "Market":
         self.bets = get_bets(marketId=self.id)
         self.comments = get_comments(marketId=self.id)
@@ -791,7 +793,7 @@ def search_markets(terms: List[str]) -> List[Market]:
         terms: A list of search terms. Must not contain spaces.
     """
     joined_terms = " ".join(terms)
-    params: Dict[str, Any] = {"terms": joined_terms}
+    params: Dict[str, Any] = {"term": joined_terms}
     resp = requests.get(SEARCH_MARKETS_URL, params=params)
     resp.raise_for_status()
     return [Market.from_json(x) for x in resp.json()]

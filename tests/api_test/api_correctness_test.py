@@ -11,7 +11,7 @@ import pytest
 def test_mechanisms():
     markets = api.get_all_markets()
     all_mechanisms = {x.mechanism for x in markets}
-    assert all_mechanisms <= {"cpmm-1", "dpm-2"}
+    assert all_mechanisms <= {'cpmm-1', 'cpmm-2', 'cpmm-multi-1', 'dpm-2', 'none', 'qf'}
 
 
 def test_comment_correctness_small():
@@ -70,7 +70,7 @@ def check_markets(market_name: str, markets: List[dict], expected_keys: Set[str]
     sometimes_present = set()
     for market in markets:
         actual_keys = set(market)
-        assert actual_keys.issubset(expected_keys)
+        assert actual_keys.issubset(expected_keys), f"Extra keys: {actual_keys - expected_keys}"
 
         always_present &= actual_keys
         never_present -= actual_keys
