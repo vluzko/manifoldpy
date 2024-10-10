@@ -4,6 +4,7 @@
 [![PyPI version](https://badge.fury.io/py/manifoldpy.svg)](https://badge.fury.io/py/manifoldpy)
 [![codecov](https://codecov.io/gh/vluzko/manifoldpy/branch/main/graph/badge.svg?token=1NRQKLP6IY)](https://codecov.io/gh/vluzko/manifoldpy)
 
+This repo, in particular the API, is no longer being maintained. Manifold now releases full [data dumps](https://docs.manifold.markets/api#trade-history-dumps), which are *much* easier to work with than the API. I am still happy to review PRs.
 
 Tools for analyzing [Manifold Markets](https://manifold.markets/home) data. Currently has bindings for their API, and code for computing various accuracy metrics (Brier score, log score, calibration).
 
