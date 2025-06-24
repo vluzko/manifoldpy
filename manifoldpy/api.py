@@ -1,7 +1,5 @@
 """API bindings"""
 import bisect
-import sys
-from time import time
 from typing import Any, Dict, List, Literal, Mapping, Optional, Tuple, Type, TypeVar
 
 import numpy as np
@@ -9,7 +7,6 @@ import numpy.typing as npt
 import requests
 from attr import define, field
 
-from manifoldpy import config
 
 V0_URL = "https://api.manifold.markets/v0/"
 
@@ -45,7 +42,7 @@ MAKE_COMMENT_URL = V0_URL + "comment"
 
 MarketT = TypeVar("MarketT", bound="Market")
 OutcomeType = Literal[
-    "BINARY", "FREE_RESPONSE", "PSEUDO_NUMERIC", "MULTIPLE_CHOICE", "NUMERIC"
+    "BINARY", "FREE_RESPONSE", "PSEUDO_NUMERIC", "MULTIPLE_CHOICE", "NUMERIC", "MULTI_NUMERIC", "QUADRATIC_FUNDING", "STONK", "POLL", "BOUNTIED_QUESTION", "DATE"
 ]
 OrderType = Literal["shares", "profit"]
 Visibility = Literal["public", "unlisted"]
@@ -101,6 +98,7 @@ class Bet:
     probBefore: float
     id: str
     outcome: str
+    answerId: str
     challengeSlug: Optional[str] = None
     isLiquidityProvision: Optional[bool] = None
     isCancelled: Optional[bool] = None
@@ -109,9 +107,7 @@ class Bet:
     isFilled: Optional[bool] = None
     limitProb: Optional[float] = None
     dpmShares: Optional[float] = None
-    # TODO: Define Fees class
     fees: Optional[dict] = None
-    # TODO: Define Sale class
     sale: Optional[dict] = None
     isSold: Optional[bool] = None
     loanAmount: Optional[float] = None
@@ -141,11 +137,16 @@ class Comment:
     betId: Optional[str] = None
     betAmount: Optional[float] = None
     betOutcome: Optional[Any] = None
-    commenterPositionOutcome: Optional[Any] = None
     replyToCommentId: Optional[str] = None
     likes: Optional[int] = None
-    commenterPositionShares: Optional[float] = None
+    commentorPositionProb: Optional[float] = None
+    commentorPositionOutcome: Optional[Any] = None
+    commentorPositionShares: Optional[float] = None
+    commentorPositionAnswerId: Optional[str] = None
+    # Yes these do both actually exist
     commenterPositionProb: Optional[float] = None
+    commenterPositionOutcome: Optional[Any] = None
+    commenterPositionShares: Optional[float] = None
     answerOutcome: Optional[str] = None
     hiderId: Optional[str] = None
     hidden: Optional[bool] = None
@@ -154,9 +155,15 @@ class Comment:
     bettorUsername: Optional[str] = None
     editedTime: Optional[int] = None
     betAnswerId: Optional[str] = None
-    commenterPositionAnswerId: Optional[str] = None
     bountyAwarded: Optional[bool] = None
     betReplyAmountsByOutcome: Optional[Dict[str, int]] = None
+    isRepost: Optional[bool] = field(kw_only=True, default=None)
+    betToken: Optional[str] = field(kw_only=True, default=None)
+    bets: Optional[list[str]] = field(kw_only=True, default=None)
+    bettorId: Optional[str] = field(kw_only=True, default=None)
+    betOrderAmount: Optional[float] = field(kw_only=True, default=None)
+    betLimitProb: Optional[float] = field(kw_only=True, default=None)
+
 
 
 @define
@@ -224,6 +231,8 @@ class Market:
     creatorId: str
     creatorAvatarUrl: str
     uniqueBettorCount: int
+    probability: float
+    answers: Optional[Any] = None
     resolutionProbability: Optional[float] = field(kw_only=True, default=None)
     resolverId: Optional[str] = field(kw_only=True, default=None)
     p: Optional[float] = field(kw_only=True, default=None)
@@ -240,7 +249,12 @@ class Market:
     description: Optional[dict] = field(kw_only=True, default=None)
     bets: Optional[List[Bet]] = field(kw_only=True, default=None)
     comments: Optional[List[Comment]] = field(kw_only=True, default=None)
-    
+    marketTier: Optional[str] = field(kw_only=True, default=None)
+    visibility: Optional[str] = field(kw_only=True, default=None)
+    token: Optional[str] = field(kw_only=True, default=None)
+    siblingContractId: Optional[str] = field(kw_only=True, default=None)
+    deleted: Optional[bool] = field(kw_only=True, default=None)
+
     def get_full_data(self) -> "Market":
         self.bets = get_bets(marketId=self.id)
         self.comments = get_comments(marketId=self.id)
@@ -274,146 +288,7 @@ class Market:
             json["bets"] = [weak_structure(x, Bet) for x in json["bets"]]
         if "comments" in json and json["comments"] is not None:
             json["comments"] = [weak_structure(x, Comment) for x in json["comments"]]
-
-        try:
-            cls = MARKET_TYPES_MAP[json["outcomeType"]]
-        except KeyError:
-            market_id = json["id"]
-            raise ValueError(
-                f'{json["outcomeType"]} isn\'t a known market outcome type. Submit a bug report for market ID {market_id}.'
-            )
-        return weak_structure(json, cls)
-
-
-@define
-class BinaryMarket(Market):
-    """A market with a binary resolution"""
-
-    probability: float
-
-    def num_traders(self) -> int:
-        if self.bets is None:
-            return 0
-        else:
-            unique_traders = {b.userId for b in self.bets}
-            return len(unique_traders)
-
-    def probability_history(
-        self,
-    ) -> Tuple[npt.NDArray[np.int_], npt.NDArray[np.float_]]:
-        assert (
-            self.bets is not None
-        ), "Call get_market before accessing probability history"
-        times: npt.NDArray[np.int_]
-        probabilities: npt.NDArray[np.float_]
-        if len(self.bets) == 0:
-            times, probabilities = np.array([self.createdTime]), np.array(
-                [self.probability]
-            )
-        else:
-            s_bets = sorted(self.bets, key=lambda x: x.createdTime)
-            start_prob = s_bets[0].probBefore
-            start_time = self.createdTime
-            t_iter, p_iter = zip(*[(bet.createdTime, bet.probAfter) for bet in s_bets])
-            times, probabilities = np.array((start_time, *t_iter)), np.array(
-                (start_prob, *p_iter)
-            )
-        return times, probabilities
-
-    def start_probability(self) -> float:
-        return self.probability_history()[1][0]
-
-    def final_probability(self) -> float:
-        return self.probability_history()[1][-1]
-
-    def probability_at_time(self, timestamp: float):
-        times, probs = self.probability_history()
-        if timestamp < times[0]:
-            raise ValueError(f"Timestamp {timestamp} before market creation {times[0]}")
-        else:
-            index = bisect.bisect(times, timestamp)
-            assert index > 0  # should be caught above
-            return probs[index - 1]
-
-
-@define
-class FreeResponseMarket(Market):
-    """A market with multiple possible resolutions"""
-
-    answers: Optional[List[Any]] = None
-
-    def outcome_history(self) -> Tuple[Tuple[str, ...], np.ndarray]:
-        assert self.answers is not None
-        outcomes, times = zip(*[(a["text"], a["createdTime"]) for a in self.answers])
-        return outcomes, np.array(times)
-
-    def full_history(self) -> Tuple[np.ndarray, np.ndarray]:
-        assert (
-            self.bets is not None
-        ), "Can't get history. Need to download bet history first."
-        self.bets = sorted(self.bets, key=lambda x: x.createdTime)
-        outcomes, _ = self.outcome_history()
-        amounts = np.zeros((len(outcomes) + 1, len(self.bets)))
-        times = np.empty(len(self.bets), dtype=int)
-        for i, b in enumerate(self.bets):
-            idx = int(b.outcome)
-            amounts[idx, i] = b.shares
-            times[i] = b.createdTime
-        total_invested = amounts.cumsum(axis=1)
-        squared_invested = total_invested**2
-        squared_pool = squared_invested.sum(axis=0)
-        probabilities = squared_invested / squared_pool
-
-        return times, probabilities
-
-    def probability_history(self) -> Tuple[np.ndarray, np.ndarray]:
-        assert self.resolution is not None
-        times, probabilities = self.full_history()
-        resolution = int(self.resolution)
-        return times, probabilities[resolution]
-
-    def final_probability(self) -> float:
-        if self.bets is None:
-            pass
-        raise NotImplementedError
-
-
-@define
-class NumericMarket(Market):
-    pass
-
-
-@define
-class PseudoNumericMarket(Market):
-    value: float
-    probability: float
-
-
-@define
-class MultipleChoiceMarket(Market):
-    answers: List[dict]
-
-
-@define
-class QuadraticFundingMarket(Market):
-    pass
-
-
-@define
-class StonkMarket(Market):
-    """Don't ask me what they were thinking with this name"""
-
-    pass
-
-
-@define
-class Poll(Market):
-    pass
-
-
-@define
-class BountiedMarket(Market):
-    pass
+        return weak_structure(json, Market)
 
 
 @define
@@ -442,19 +317,6 @@ class ContractMetric:
             json_dict["from_dict"] = json_dict["from"]
             del json_dict["from"]
         return weak_structure(json_dict, cls)
-
-
-MARKET_TYPES_MAP: Mapping[str, Type[Market]] = {
-    "BINARY": BinaryMarket,
-    "FREE_RESPONSE": FreeResponseMarket,
-    "NUMERIC": NumericMarket,
-    "PSEUDO_NUMERIC": PseudoNumericMarket,
-    "MULTIPLE_CHOICE": MultipleChoiceMarket,
-    "QUADRATIC_FUNDING": QuadraticFundingMarket,
-    "STONK": StonkMarket,
-    "POLL": Poll,
-    "BOUNTIED_QUESTION": BountiedMarket,
-}
 
 
 def _get_bets(
@@ -527,83 +389,6 @@ def get_bets(
             marketSlug=marketSlug,
             limit=limit,
             before=before,
-        )
-    ]
-
-
-def _get_all_bets(
-    username: Optional[str] = None,
-    userId: Optional[str] = None,
-    marketId: Optional[str] = None,
-    marketSlug: Optional[str] = None,
-    after: int = 0,
-    limit: int = sys.maxsize,
-    before_id: Optional[str] = None,
-) -> List[Dict[str, Any]]:
-    """Underlying API call for `get_all_bets`."""
-    bets: List[Dict[str, Any]] = []
-    i = before_id
-    while True:
-        num_to_get = min(limit - len(bets), 1000)
-        if num_to_get <= 0:
-            break
-        new_bets = [
-            b
-            for b in _get_bets(
-                limit=num_to_get,
-                before=i,
-                username=username,
-                userId=userId,
-                marketId=marketId,
-                marketSlug=marketSlug,
-            )
-            if b["createdTime"] > after
-        ]
-        bets.extend(new_bets)
-        print(f"Fetched {len(bets)} bets.")
-        if len(new_bets) < 1000:
-            break
-        else:
-            i = bets[-1]["id"]
-    # TODO: Need a better way to determine equality of bets. `id` is not sufficient
-    # At least some bets have duplicate ids.
-    # assert len(bets) == len({b.id for b in bets})
-    return bets
-
-
-def get_all_bets(
-    username: Optional[str] = None,
-    userId: Optional[str] = None,
-    marketId: Optional[str] = None,
-    marketSlug: Optional[str] = None,
-    after: int = 0,
-    limit: int = sys.maxsize,
-) -> List[Bet]:
-    """Get all bets by a specific user.
-    Unlike get_bets, this will get all available bets, without a limit
-    on the number fetched.
-    Automatically calls the bets endpoint until all data has been read.
-    You must provide at least one of the arguments, otherwise the server
-    will be very sad.
-
-    Args:
-        username: The user to get bets for.
-        userId: The ID of the user to get bets for.
-        marketId: The ID of the market to get bets for.
-        marketSlug: The slug of the market to get bets for.
-        after: If present, will only fetch bets created after this timestamp.
-        limit: The maximum number of bets to retrieve.
-        as_json: Whether to return the raw JSON response from the API.
-    """
-    return [
-        weak_structure(x, Bet)
-        for x in _get_all_bets(
-            username=username,
-            userId=userId,
-            marketId=marketId,
-            marketSlug=marketSlug,
-            after=after,
-            limit=limit,
         )
     ]
 
@@ -745,47 +530,6 @@ def get_markets(limit: int = 1000, before: Optional[str] = None) -> List[Market]
     return [Market.from_json(x) for x in json_markets]
 
 
-def _get_all_markets(after: int = 0, limit: int = sys.maxsize) -> List[Dict[str, Any]]:
-    """Underlying API call for `get_all_markets`.
-
-    Returns:
-        Markets as raw JSON.
-    """
-    markets: List[Dict[str, Any]] = []
-    i = None
-    while True:
-        num_to_get = min(limit - len(markets), 1000)
-        if num_to_get <= 0:
-            break
-        new_markets = [
-            x
-            for x in _get_markets(limit=num_to_get, before=i)
-            if x["createdTime"] > after
-        ]
-        markets.extend(new_markets)  # type: ignore
-        print(f"Fetched {len(markets)} markets.")
-        if len(new_markets) < 1000:
-            break
-        else:
-            i = markets[-1]["id"]
-
-    assert len(markets) == len({m["id"] for m in markets})  # type: ignore
-    return markets
-
-
-def get_all_markets(after: int = 0, limit: int = sys.maxsize) -> List[Market]:
-    """Get all markets.
-    Unlike get_markets, this will get all available markets, without a limit
-    on the number fetched.
-    Automatically calls the markets endpoint until all data has been read.
-
-    Args:
-        after: If present, will only fetch markets created after this timestamp.
-        limit: The maximum number of markets to retrieve.
-    """
-    return [Market.from_json(x) for x in _get_all_markets(after=after, limit=limit)]
-
-
 def search_markets(terms: List[str]) -> List[Market]:
     """Search markets by terms.
     Returns at most 100 markets.
@@ -848,32 +592,6 @@ def get_users(limit: int = 1000, before: Optional[str] = None) -> List[User]:
     resp = requests.get(USERS_URL, params=params)  # type: ignore
     resp.raise_for_status()
     return [weak_structure(x, User) for x in resp.json()]
-
-
-def get_all_users(limit: int = sys.maxsize) -> List[User]:
-    """Get a list of all users.
-    Repeatedly calls the users endpoint until no new users are returned.
-
-    Args:
-        limit: The maximum number of users to get.
-
-    Returns:
-        A list of all users.
-    """
-    users: List[User] = []
-    i = None
-    while True:
-        num_to_get = min(limit - len(users), 1000)
-        new_users = get_users(limit=num_to_get, before=i)
-        users.extend(new_users)
-        if len(new_users) < 1000:
-            break
-        else:
-            i = users[-1].id
-
-    # Users should have unique IDs
-    assert len(users) == len({u.id for u in users})
-    return users
 
 
 @define

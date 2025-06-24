@@ -11,11 +11,6 @@ Tools for analyzing [Manifold Markets](https://manifold.markets/home) data. Curr
 
 [Full Documentation](https://manifold-markets-python.readthedocs.io/en/latest/).
 
-## Calibration
-This is the most recent calibration graph for Manifold Markets. Markets with less than 4 unique traders are excluded. The calibration is generated from the probability *halfway* between market open and market close.
-
-[![Midmarket calibration](https://github.com/vluzko/manifoldpy/blob/main/docs/midway_calibration.png)](https://github.com/vluzko/manifoldpy/blob/main/docs/midway_calibration.png)
-
 ## Installation
 The package is on PyPI as [`manifoldpy`](https://pypi.org/project/manifoldpy/). It can be installed with:
 ```
