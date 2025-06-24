@@ -45,7 +45,7 @@ jobs:
             ./codecov
   test-3-11:
     docker:
-      - image: circleci/python:3.11.0a3
+      - image: cimg/python:3.11
     steps:
       - run_tests
   test-3-10:
