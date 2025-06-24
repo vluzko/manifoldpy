@@ -1,5 +1,4 @@
 from manifoldpy import api
-import json
 
 
 def test_weak_unstructure():
@@ -37,7 +36,13 @@ def test_weak_unstructure():
         "comments": None,
         'lastBetTime': None, 
         'lastCommentTime': None,
-        'resolverId': None
+        'resolverId': None,
+        'deleted': None,
+        'marketTier': None,
+        'siblingContractId': None,
+        'token': None,
+        'visibility': None,
+        'answers': None,
     }
     m = api.Market.from_json(json_dict)
     recon_json = api.weak_unstructure(m)

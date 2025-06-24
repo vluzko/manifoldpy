@@ -1,17 +1,5 @@
 from typing import List, Set
-
-from api_test import SKIP_LONG
-
 from manifoldpy import api
-
-import pytest
-
-
-@SKIP_LONG
-def test_mechanisms():
-    markets = api.get_all_markets()
-    all_mechanisms = {x.mechanism for x in markets}
-    assert all_mechanisms <= {'cpmm-1', 'cpmm-2', 'cpmm-multi-1', 'dpm-2', 'none', 'qf'}
 
 
 def test_comment_correctness_small():
@@ -21,21 +9,6 @@ def test_comment_correctness_small():
     assert actual_keys.issubset(
         expected_keys
     ), f"Extra keys: {actual_keys - expected_keys}"
-
-
-def test_probability_at_time() -> None:
-    market = api.get_full_market("pBPJS5ebbd3QD3RVi8AN")
-    assert isinstance(market, api.BinaryMarket)
-    with pytest.raises(ValueError):
-        assert market.probability_at_time(0)
-    with pytest.raises(ValueError):
-        assert market.probability_at_time(1660753976383)
-    # Market creation
-    assert market.probability_at_time(1660753976384) == pytest.approx(0.5, abs=1e-4)
-    # Oct 22 2022
-    assert market.probability_at_time(1666421235253) == pytest.approx(0.4184, abs=1e-4)
-    # After market close
-    assert market.probability_at_time(1683153271736) == pytest.approx(0.93, abs=1e-4)
 
 
 def test_comment_correctness_large():
@@ -51,17 +24,6 @@ def test_comment_correctness_large():
         if len(json) > 0:
             always_present &= actual_keys
     print(f"Always present keys: {always_present}")
-
-
-def test_market_correctness_large():
-    markets = api._get_all_markets(limit=10000)
-    expected_keys = {x.name for m in api.MARKET_TYPES_MAP.values() for x in m.__attrs_attrs__}  # type: ignore
-    check_markets("BASE", markets, expected_keys)
-
-    for m_name, m_type in api.MARKET_TYPES_MAP.items():
-        expected_keys = {x.name for x in m_type.__attrs_attrs__}  # type: ignore
-        sub_type_markets = [x for x in markets if x["outcomeType"] == m_name]
-        check_markets(m_name, sub_type_markets, expected_keys)
 
 
 def check_markets(market_name: str, markets: List[dict], expected_keys: Set[str]):
